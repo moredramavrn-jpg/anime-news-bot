@@ -2,18 +2,25 @@ import os
 import re
 import html
 import io
+import json
+import base64
+import uuid
+import time
+import urllib3
 import feedparser
 import telebot
 import requests
 import yt_dlp
+from difflib import SequenceMatcher
 from urllib.parse import urljoin, urlparse, unquote
 from bs4 import BeautifulSoup
 from telebot import types
 
-# ===== НАСТРОЙКИ =====
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
-HF_API_KEY = os.getenv("HF_API_KEY")
+GIGACHAT_AUTHORIZATION_KEY = os.getenv("GIGACHAT_AUTHORIZATION_KEY")
 
 RSS_URLS = [
     "https://www.goha.ru/rss/anime",
@@ -21,21 +28,50 @@ RSS_URLS = [
 ]
 
 POSTED_FILE = "posted.txt"
-HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
+gigachat_access_token = None
+gigachat_token_expires_at = 0
+
+# ---------- Работа с опубликованными ----------
+def normalize_title(title):
+    return re.sub(r'[^\w]', '', title.lower())
+
 def load_posted():
-    if not os.path.exists(POSTED_FILE):
-        return set()
-    with open(POSTED_FILE, 'r', encoding='utf-8') as f:
-        return set(line.strip() for line in f if line.strip())
+    links = set()
+    titles = set()
+    if os.path.exists(POSTED_FILE):
+        with open(POSTED_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('LINK:'):
+                    links.add(line[5:])
+                elif line.startswith('TITLE:'):
+                    titles.add(line[6:])
+                elif line:
+                    links.add(line)
+    return links, titles
 
-def save_posted(posted_links):
+def save_posted(links, titles):
     with open(POSTED_FILE, 'w', encoding='utf-8') as f:
-        for link in posted_links:
-            f.write(link + '\n')
+        for link in links:
+            f.write(f"LINK:{link}\n")
+        for title in titles:
+            f.write(f"TITLE:{title}\n")
 
+def is_duplicate(link, title, links, titles):
+    if link and link in links:
+        return True
+    norm_title = normalize_title(title)
+    if norm_title in titles:
+        return True
+    for existing_title in titles:
+        if SequenceMatcher(None, norm_title, existing_title).ratio() > 0.9:
+            return True
+    return False
+
+# ---------- HTML / парсинг ----------
 def clean_html(raw_html):
     if not raw_html:
         return ""
@@ -83,7 +119,7 @@ def extract_full_text_from_page(soup):
             'div.post-content', 'div.entry-content', 'div.article-content',
             'div.news-detail__text', 'div.b-news__text', 'div.js-news-text',
             'div.article__text', 'div.text-content', 'div.news-item__text',
-            'div.detail__text', 'div.news-full__text'
+            'div.detail__text', 'div.news-full__text', 'div.article-body'
         ]
         for selector in selectors:
             main_content = soup.select_one(selector)
@@ -107,22 +143,17 @@ def fetch_full_text(entry):
         return clean_html(summary)
     return ""
 
+# ---------- Изображения ----------
 def extract_image_from_page(soup, page_url=None):
     if not soup:
         return None
 
     selectors = [
-        'div.editor-body-image img',      # Goha.ru
-        'div.editor-body img',
-        'div.news_cover_center img',      # КГ-Портал
-        'div.news_text img',
-        'div.news_box img',
-        'article img',
-        'div.news_image img',
-        'div.article_image img',
-        'div.full_news img',
-        'div.news_content img',
-        'div.news-full__text img',
+        'div.editor-body-image img', 'div.editor-body img',
+        'div.news_cover_center img', 'div.news_text img',
+        'div.news_box img', 'article img', 'div.news_image img',
+        'div.article_image img', 'div.full_news img',
+        'div.news_content img', 'div.news-full__text img',
     ]
 
     for selector in selectors:
@@ -204,17 +235,12 @@ def extract_image_url_from_entry(entry):
                 return make_absolute(match.group(1), base_domain)
     return None
 
+# ---------- Видео ----------
 def is_youtube_video(url):
     return ('youtube.com/watch' in url) or ('youtu.be/' in url)
 
 def to_short_youtube_url(url):
-    """
-    Преобразует любую YouTube-ссылку в короткую youtu.be/ID,
-    включая ссылки с закодированными символами (%3F, %3D).
-    """
-    # Декодируем URL, чтобы убрать %3F, %3D и т.п.
     decoded_url = unquote(url)
-    # Извлекаем ID видео
     video_id = None
     if 'youtube.com/watch' in decoded_url:
         match = re.search(r'v=([^&]+)', decoded_url)
@@ -226,13 +252,12 @@ def to_short_youtube_url(url):
             video_id = match.group(1)
     if video_id:
         return f"https://youtu.be/{video_id}"
-    return decoded_url  # если не получилось, возвращаем декодированную ссылку
+    return decoded_url
 
 def extract_video_url_from_page(soup):
     if not soup:
         return None, False
 
-    # 1. Прямые видеофайлы (mp4/webm) – приоритет
     video_tag = soup.select_one('video')
     if video_tag:
         src = video_tag.get('src')
@@ -248,14 +273,6 @@ def extract_video_url_from_page(soup):
         if re.search(r'\.(mp4|webm)(\?.*)?$', url, re.IGNORECASE):
             return url, False
 
-    scripts = soup.find_all('script')
-    script_text = ' '.join(s.get_text() for s in scripts)
-    pattern = r'(?:sources|vodQualities)[^{]*?["\']src["\']\s*:\s*["\']([^"\']+\.(?:mp4|webm))'
-    match = re.search(pattern, script_text, re.IGNORECASE)
-    if match:
-        return html.unescape(match.group(1)), False
-
-    # 2. YouTube видео
     yt_tag = soup.select_one('editor-body-youtube')
     if yt_tag and yt_tag.get('url'):
         url = yt_tag['url']
@@ -291,7 +308,6 @@ def fetch_video_info(entry, soup=None):
     return None, False
 
 def download_youtube_video(youtube_url):
-    """Скачивает YouTube-видео и возвращает BytesIO."""
     try:
         ydl_opts = {
             'format': 'best[ext=mp4]',
@@ -326,6 +342,7 @@ def download_image(url, referer=None):
         print(f"Не удалось скачать изображение {url}: {e}")
         return None
 
+# ---------- Обработка текста ----------
 def simple_truncate_by_sentences(text, max_len):
     if len(text) <= max_len:
         return text
@@ -339,89 +356,95 @@ def simple_truncate_by_sentences(text, max_len):
         return text[:max_len]
     return result
 
-def call_hf_api(prompt):
-    headers = {
-        "Authorization": f"Bearer {HF_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 512,
-            "temperature": 0.3,
-            "return_full_text": False
-        }
-    }
-    try:
-        response = requests.post(HF_MODEL_URL, headers=headers, json=payload, timeout=20)
-        response.raise_for_status()
-        result = response.json()
-        if isinstance(result, list) and len(result) > 0:
-            return result[0].get('generated_text', '').strip()
-        elif isinstance(result, dict):
-            return result.get('generated_text', '').strip()
-        else:
-            return str(result).strip()
-    except Exception as e:
-        print(f"Ошибка при обращении к Hugging Face: {e}")
-        return None
-
-def smart_truncate(text, max_len):
+def truncate_by_words(text, max_len):
     if len(text) <= max_len:
         return text
+    words = text.split()
+    result = []
+    current_len = 0
+    for w in words:
+        if current_len + len(w) + 1 > max_len:
+            break
+        result.append(w)
+        current_len += len(w) + 1
+    return ' '.join(result)
 
-    prompt = f"""Напиши краткий пересказ следующей новости на русском языке. Объём пересказа должен быть не более {max_len} символов. Сохрани все важные факты, имена, названия. Не добавляй ничего от себя.
+def strip_html_tags(text):
+    return re.sub(r'<[^>]+>', '', text)
 
-Новость:
-{text}
-"""
-    shortened = call_hf_api(prompt)
-    if shortened and len(shortened) >= 50:
-        if len(shortened) > max_len:
-            shortened = simple_truncate_by_sentences(shortened, max_len)
-        return shortened
-    else:
-        print("Hugging Face не справился, используем обрезание по предложениям")
-        return simple_truncate_by_sentences(text, max_len)
+def fix_quotes(text):
+    # Замена прямых кавычек на ёлочки
+    result = []
+    open_quote = False
+    for ch in text:
+        if ch == '"':
+            if not open_quote:
+                result.append('«')
+                open_quote = True
+            else:
+                result.append('»')
+                open_quote = False
+        else:
+            result.append(ch)
+    # Заменяем „...“ на «...»
+    text = ''.join(result)
+    text = text.replace('„', '«').replace('“', '»')
+    return text
 
-def format_news_body(text):
+def fix_punctuation_spaces(text):
+    # Убираем пробел перед знаками препинания
+    text = re.sub(r'\s+([.,!?;:])', r'\1', text)
+    # Убираем пробел после открывающей кавычки
+    text = re.sub(r'(«)\s+', r'\1', text)
+    # Убираем пробел перед закрывающей кавычкой
+    text = re.sub(r'\s+(»)', r'\1', text)
+    return text
+
+def remove_garbage_lines(text):
+    """Удаляет строки, которые выглядят как рассуждения или вопросы."""
+    lines = text.split('\n')
+    cleaned = []
+    for line in lines:
+        # Если строка содержит риторический вопрос или начинается с сомнительных слов – пропускаем
+        if re.search(r'\?\s*$', line):
+            continue
+        if re.match(r'^(Что за|Впрочем|Но и|Как думаете|Кстати|Наверное|Возможно)', line, re.IGNORECASE):
+            continue
+        cleaned.append(line)
+    return '\n'.join(cleaned)
+
+def clean_and_paragraph(text):
     if not text:
         return ""
-    text = re.sub(r'\n(?!\n)', ' ', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'\s*\n\s*', ' ', text)
     text = re.sub(r' {2,}', ' ', text).strip()
-
-    unwanted_phrases = [
-        r'Читать дальше\s*→?',
-        r'Читать полностью\s*:?',
-        r'Источник\s*:',
-    ]
-    for pattern in unwanted_phrases:
-        text = re.sub(pattern, '', text, flags=re.IGNORECASE)
-
-    if '\n\n' in text:
-        paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
-    else:
-        sentences = re.split(r'(?<=[.!?])\s+', text)
-        if len(sentences) <= 1:
-            paragraphs = [text]
-        else:
-            paragraphs = []
-            current = []
-            for sent in sentences:
-                current.append(sent)
-                if len(current) == 2:
-                    paragraphs.append(" ".join(current))
-                    current = []
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    if len(sentences) <= 1:
+        return text
+    paragraphs = []
+    current = []
+    LONG_SENTENCE_THRESHOLD = 120
+    for sent in sentences:
+        if len(sent) >= LONG_SENTENCE_THRESHOLD:
             if current:
                 paragraphs.append(" ".join(current))
-
-    def bold_quotes(s):
-        return re.sub(r'«[^»]+»', lambda m: f"<b>{m.group(0)}</b>", s)
-
-    paragraphs = [bold_quotes(p) for p in paragraphs]
-
+                current = []
+            paragraphs.append(sent)
+        else:
+            current.append(sent)
+            if len(current) == 2:
+                paragraphs.append(" ".join(current))
+                current = []
+    if current:
+        paragraphs.append(" ".join(current))
     return "\n\n".join(paragraphs)
+
+def format_news_body(text):
+    text = clean_and_paragraph(text)
+    text = fix_quotes(text)
+    text = fix_punctuation_spaces(text)
+    text = remove_garbage_lines(text)
+    return text
 
 def escape_html(text):
     return html.escape(text, quote=False)
@@ -467,7 +490,6 @@ def build_post_html(title, body, emoji='📄'):
     return "\n".join(parts)
 
 def is_podcast_entry(entry):
-    """Пропускаем выпуски подкастов (например, ЕВА-699)."""
     title = entry.get('title', '')
     link = entry.get('link', '')
     if re.match(r'^ЕВА-\d+', title, re.IGNORECASE):
@@ -477,6 +499,158 @@ def is_podcast_entry(entry):
     if re.search(r'/eva\d+', link, re.IGNORECASE):
         return True
     return False
+
+# ---------- GigaChat API ----------
+def get_gigachat_token():
+    global gigachat_access_token, gigachat_token_expires_at
+
+    if gigachat_access_token and time.time() < gigachat_token_expires_at - 30:
+        return gigachat_access_token
+
+    url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "RqUID": str(uuid.uuid4()),
+        "Authorization": f"Basic {GIGACHAT_AUTHORIZATION_KEY}"
+    }
+    data = {"scope": "GIGACHAT_API_PERS"}
+    try:
+        r = requests.post(url, headers=headers, data=data, timeout=15, verify=False)
+        r.raise_for_status()
+        token_data = r.json()
+        gigachat_access_token = token_data.get("access_token")
+        expires_at = token_data.get("expires_at")
+        if expires_at:
+            gigachat_token_expires_at = expires_at / 1000 if expires_at > 10**12 else expires_at
+        else:
+            gigachat_token_expires_at = time.time() + 1800
+        return gigachat_access_token
+    except Exception as e:
+        print(f"Ошибка получения токена GigaChat: {e}")
+        return None
+
+def rewrite_news(title, body):
+    if not GIGACHAT_AUTHORIZATION_KEY:
+        print("GigaChat: нет ключа авторизации")
+        return title, body
+
+    token = get_gigachat_token()
+    if not token:
+        print("GigaChat: не удалось получить токен")
+        return title, body
+
+    body_part = body[:3000]
+
+    prompt = f"""Перепиши следующие заголовок и текст новости так, чтобы они стали уникальными, но сохранили все ключевые факты, имена, названия.
+Постарайся сохранить объём примерно 1500 символов. Не упускай важные детали.
+Разбей текст на логические абзацы, каждый абзац должен содержать ровно 2 предложения.
+Избегай дословного копирования. Используй стандартные кавычки «» и не ставь лишние пробелы.
+Не задавай вопросов, не пиши комментарии от себя, не используй вводные слова-рассуждения.
+Пиши на русском языке.
+
+Заголовок: {title}
+
+Текст: {body_part}
+
+Выведи результат строго в формате:
+Заголовок: <новый заголовок>
+Текст: <новый текст>
+"""
+    try:
+        response = requests.post(
+            "https://api.giga.chat/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "X-Request-ID": str(uuid.uuid4()),
+                "X-Session-ID": str(uuid.uuid4()),
+                "User-Agent": "AnimeNewsBot/1.0"
+            },
+            json={
+                "model": "GigaChat-3-Ultra",
+                "messages": [
+                    {"role": "system", "content": "Ты — редактор аниме-новостей."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 1200
+            },
+            timeout=30,
+            verify=False
+        )
+        response.raise_for_status()
+        data = response.json()
+        generated_text = data["choices"][0]["message"]["content"].strip()
+
+        new_title = title
+        new_body = body
+        for line in generated_text.split('\n'):
+            line = line.strip()
+            if line.startswith('Заголовок:'):
+                new_title = line.replace('Заголовок:', '').strip()
+            elif line.startswith('Текст:'):
+                new_body = line.replace('Текст:', '').strip()
+
+        # Финальная очистка
+        new_title = fix_quotes(new_title)
+        new_title = fix_punctuation_spaces(new_title)
+        new_body = clean_and_paragraph(new_body)
+        new_body = fix_quotes(new_body)
+        new_body = fix_punctuation_spaces(new_body)
+        new_body = remove_garbage_lines(new_body)
+
+        if new_title and new_body:
+            print(f"GigaChat вернул новый заголовок: {new_title[:50]}...")
+            return new_title, new_body
+        else:
+            print("GigaChat: не удалось распознать результат")
+            return title, body
+    except Exception as e:
+        print(f"Ошибка при рерайте через GigaChat: {e}")
+        return title, body
+
+def build_caption_fit(title, body, emoji, max_len=1024):
+    full_html = build_post_html(title, body, emoji)
+    plain_text = strip_html_tags(full_html)
+
+    if len(plain_text) <= max_len:
+        return full_html
+
+    hashtags = ["#аниме", "#новости"]
+    title_tag = extract_title_hashtag(title)
+    if title_tag and title_tag not in hashtags:
+        hashtags.append(title_tag)
+    tags_str = " ".join(hashtags)
+
+    title_plain = f"{emoji} {title}"
+    separator_plain = "┄┄┄ ✦ ┄┄┄"
+    footer_plain = f"🏷️ {tags_str}"
+
+    base_len = len(title_plain) + len(separator_plain) + len(footer_plain) + 6
+    available = max_len - base_len
+
+    if available < 50:
+        return truncate_by_words(plain_text, max_len)
+
+    body_formatted = format_news_body(body)
+    body_paragraphs = body_formatted.split('\n\n')
+    chosen = []
+    current_len = 0
+    for para in body_paragraphs:
+        para_plain = strip_html_tags(para)
+        if current_len + len(para_plain) + 2 <= available:
+            chosen.append(para)
+            current_len += len(para_plain) + 2
+        else:
+            remaining = available - current_len
+            if remaining > 20:
+                truncated_para = truncate_by_words(para_plain, remaining)
+                chosen.append(truncated_para)
+            break
+
+    truncated_body = '\n\n'.join(chosen)
+    return f"{emoji} <b>{escape_html(title)}</b>\n{separator_plain}\n{truncated_body}\n\n🏷️ {tags_str}"
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
     if video_url and is_youtube:
@@ -488,56 +662,51 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
+    title, body = rewrite_news(title, body)
+
     if video_url or image_url:
-        body = smart_truncate(body, 800) if body else ""
+        full_message = build_caption_fit(title, body, emoji, 1024)
     else:
-        body = smart_truncate(body, 3000) if body else ""
+        full_message = build_post_html(title, body, emoji)
 
-    message_text = build_post_html(title, body, emoji)
-
-    # Прямое видео (mp4/webm)
     if video_url and not is_youtube:
         try:
-            bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML')
+            bot.send_video(CHANNEL_ID, video_url, caption=full_message[:1024], parse_mode='HTML')
             return
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # YouTube: пробуем скачать и отправить как видео
     if video_url and is_youtube:
         video_file = download_youtube_video(video_url)
         if video_file:
             try:
-                bot.send_video(CHANNEL_ID, video_file, caption=message_text[:1024], parse_mode='HTML')
+                bot.send_video(CHANNEL_ID, video_file, caption=full_message[:1024], parse_mode='HTML')
                 return
             except Exception as e:
                 print(f"Не удалось отправить скачанное видео: {e}")
 
-        # Если не удалось скачать, отправляем короткую ссылку с превью
         short_url = to_short_youtube_url(video_url)
         bot.send_message(
             CHANNEL_ID,
-            message_text + f"\n\nСмотреть: {short_url}",
+            full_message + f"\n\nСмотреть: {short_url}",
             parse_mode='HTML',
             disable_web_page_preview=False
         )
         return
 
-    # Картинка
     if image_url:
         image_file = download_image(image_url, referer=link)
         if image_file:
             try:
-                bot.send_photo(CHANNEL_ID, image_file, caption=message_text[:1024], parse_mode='HTML')
+                bot.send_photo(CHANNEL_ID, image_file, caption=full_message[:1024], parse_mode='HTML')
                 return
             except Exception as e:
                 print(f"Не удалось отправить фото: {e}")
 
-    # Обычное сообщение
-    bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True)
+    bot.send_message(CHANNEL_ID, full_message, parse_mode='HTML', disable_web_page_preview=True)
 
 def main():
-    posted_links = load_posted()
+    links, titles = load_posted()
     new_posts = 0
 
     for rss_url in RSS_URLS:
@@ -554,10 +723,10 @@ def main():
                 continue
 
             link = entry.get('link', '')
-            if not link or link in posted_links:
-                continue
-
             title = entry.get('title', 'Без названия')
+            if is_duplicate(link, title, links, titles):
+                print(f"Дубликат пропущен: {title}")
+                continue
 
             soup = get_page_soup(link) if link else None
             full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
@@ -566,15 +735,16 @@ def main():
 
             try:
                 send_post(title, full_text, link, image_url, video_url, is_youtube)
-                posted_links.add(link)
+                links.add(link)
+                titles.add(normalize_title(title))
                 new_posts += 1
                 print(f"Опубликовано: {title}")
             except Exception as e:
                 print(f"Ошибка отправки для {link}: {e}")
 
     if new_posts > 0:
-        save_posted(posted_links)
-        print(f"Сохранено {new_posts} новых ссылок в {POSTED_FILE}")
+        save_posted(links, titles)
+        print(f"Сохранено {new_posts} новых записей в {POSTED_FILE}")
     else:
         print("Новых новостей нет.")
 
