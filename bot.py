@@ -1,23 +1,23 @@
 import os
 import re
+import html
 import feedparser
 import telebot
 import requests
 from bs4 import BeautifulSoup
 
+# ===== НАСТРОЙКИ =====
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
-HF_API_KEY = os.getenv("HF_API_KEY")  # Hugging Face API Key
+HF_API_KEY = os.getenv("HF_API_KEY")
 
 RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
-# Модель Hugging Face для сокращения текста
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# ===== ФУНКЦИИ ДЛЯ ХРАНЕНИЯ ОПУБЛИКОВАННЫХ ССЫЛОК =====
 def load_posted():
     if not os.path.exists(POSTED_FILE):
         return set()
@@ -29,28 +29,16 @@ def save_posted(posted_links):
         for link in posted_links:
             f.write(link + '\n')
 
-# ===== ОЧИСТКА HTML (исправленная) =====
 def clean_html(raw_html):
     if not raw_html:
         return ""
     soup = BeautifulSoup(raw_html, "lxml")
     for script in soup(["script", "style"]):
         script.decompose()
-    # Ищем все абзацы <p> и собираем текст из них, объединяя через пустую строку
-    paragraphs = soup.find_all('p')
-    if paragraphs:
-        lines = []
-        for p in paragraphs:
-            line = p.get_text(strip=True)
-            if line:
-                lines.append(line)
-        return "\n\n".join(lines)
-    # Если <p> нет, используем общий текст с двойными переносами
     text = soup.get_text(separator="\n")
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return "\n\n".join(lines)
+    return "\n".join(lines)
 
-# ===== ЗАГРУЗКА СТРАНИЦЫ =====
 def get_page_soup(url):
     try:
         headers = {
@@ -66,28 +54,17 @@ def get_page_soup(url):
         print(f"Ошибка загрузки {url}: {e}")
         return None
 
-# ===== ИЗВЛЕЧЕНИЕ ТЕКСТА =====
 def extract_full_text_from_page(soup):
     if not soup:
         return ""
     main_content = soup.select_one('div.editor-body')
     if not main_content:
         selectors = [
-            'article',
-            'div.news-content',
-            'div.content',
-            'div.news-text',
-            'div.post-content',
-            'div.entry-content',
-            'div.article-content',
-            'div.news-detail__text',
-            'div.b-news__text',
-            'div.js-news-text',
-            'div.article__text',
-            'div.text-content',
-            'div.news-item__text',
-            'div.detail__text',
-            'div.news-full__text'
+            'article', 'div.news-content', 'div.content', 'div.news-text',
+            'div.post-content', 'div.entry-content', 'div.article-content',
+            'div.news-detail__text', 'div.b-news__text', 'div.js-news-text',
+            'div.article__text', 'div.text-content', 'div.news-item__text',
+            'div.detail__text', 'div.news-full__text'
         ]
         for selector in selectors:
             main_content = soup.select_one(selector)
@@ -110,7 +87,6 @@ def fetch_full_text(entry):
         return clean_html(summary)
     return ""
 
-# ===== ИЗВЛЕЧЕНИЕ КАРТИНКИ =====
 def extract_image_from_page(soup):
     if not soup:
         return None
@@ -162,19 +138,61 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
-# ===== УМНОЕ СОКРАЩЕНИЕ ТЕКСТА (Hugging Face) =====
-def smart_truncate(text, max_len, link):
+def extract_video_url_from_page(soup):
+    if not soup:
+        return None, False
+
+    yt_tag = soup.select_one('editor-body-youtube')
+    if yt_tag and yt_tag.get('url'):
+        return yt_tag['url'], True
+
+    iframe = soup.select_one('iframe[src*="youtube.com"], iframe[src*="youtu.be"]')
+    if iframe and iframe.get('src'):
+        return iframe['src'], True
+
+    video_tag = soup.select_one('video')
+    if video_tag:
+        src = video_tag.get('src')
+        if src:
+            return src, False
+        source_tag = video_tag.select_one('source')
+        if source_tag and source_tag.get('src'):
+            return source_tag['src'], False
+
+    og_video = soup.select_one('meta[property="og:video"]')
+    if og_video and og_video.get('content'):
+        url = og_video['content']
+        is_yt = 'youtube.com' in url or 'youtu.be' in url
+        return url, is_yt
+
+    yt_link = soup.select_one('a[href*="youtube.com"], a[href*="youtu.be"]')
+    if yt_link and yt_link.get('href'):
+        return yt_link['href'], True
+
+    return None, False
+
+def fetch_video_info(entry):
+    link = entry.get('link')
+    if link:
+        soup = get_page_soup(link)
+        if soup:
+            return extract_video_url_from_page(soup)
+    return None, False
+
+def simple_truncate_by_sentences(text, max_len):
     if len(text) <= max_len:
         return text
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    result = ""
+    for s in sentences:
+        if len(result) + len(s) + 1 > max_len:
+            break
+        result = (result + " " + s).strip()
+    if not result:
+        return text[:max_len]
+    return result
 
-    link_part = "\n\nЧитать полностью: " + link
-    available = max_len - len(link_part)
-
-    if available < 100:
-        return text[:max_len - len(link_part)] + link_part
-
-    prompt = f"Сократи следующий текст новости до {available} символов, сохранив все ключевые факты и общий смысл. Пиши на русском языке. Не добавляй ничего лишнего.\n\nТекст:\n{text}"
-
+def call_hf_api(prompt):
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}",
         "Content-Type": "application/json"
@@ -182,32 +200,116 @@ def smart_truncate(text, max_len, link):
     payload = {
         "inputs": prompt,
         "parameters": {
-            "max_new_tokens": available,
+            "max_new_tokens": 512,
             "temperature": 0.3,
             "return_full_text": False
         }
     }
-
     try:
         response = requests.post(HF_MODEL_URL, headers=headers, json=payload, timeout=20)
         response.raise_for_status()
         result = response.json()
         if isinstance(result, list) and len(result) > 0:
-            shortened = result[0].get('generated_text', '').strip()
+            return result[0].get('generated_text', '').strip()
         elif isinstance(result, dict):
-            shortened = result.get('generated_text', '').strip()
+            return result.get('generated_text', '').strip()
         else:
-            shortened = str(result).strip()
-
-        if len(shortened) + len(link_part) <= max_len:
-            return shortened + link_part
-        else:
-            return shortened[:max_len - len(link_part)] + link_part
+            return str(result).strip()
     except Exception as e:
-        print(f"Ошибка при сокращении через Hugging Face: {e}")
-        return text[:max_len - len(link_part)] + link_part
+        print(f"Ошибка при обращении к Hugging Face: {e}")
+        return None
 
-# ===== ОСНОВНАЯ ЛОГИКА =====
+def smart_truncate(text, max_len):
+    if len(text) <= max_len:
+        return text
+    prompt = f"""Напиши краткий пересказ следующей новости на русском языке. Объём пересказа должен быть не более {max_len} символов. Сохрани все важные факты, имена, названия. Не добавляй ничего от себя.
+
+Новость:
+{text}
+"""
+    shortened = call_hf_api(prompt)
+    if shortened and len(shortened) >= 50:
+        if len(shortened) > max_len:
+            shortened = simple_truncate_by_sentences(shortened, max_len)
+        return shortened
+    else:
+        print("Hugging Face не справился, используем обрезание по предложениям")
+        return simple_truncate_by_sentences(text, max_len)
+
+def format_news_body(text):
+    if not text:
+        return ""
+
+    # Заменяем одиночные \n на пробел, сохраняем двойные
+    text = re.sub(r'\n(?!\n)', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r' {2,}', ' ', text).strip()
+
+    # Если есть абзацы, возвращаем как есть
+    if '\n\n' in text:
+        return text
+
+    # Разбиваем на предложения и группируем по 2
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    if len(sentences) <= 1:
+        return text
+
+    paragraphs = []
+    current = []
+    for sent in sentences:
+        current.append(sent)
+        if len(current) == 2:
+            paragraphs.append(" ".join(current))
+            current = []
+    if current:
+        paragraphs.append(" ".join(current))
+
+    return "\n\n".join(paragraphs)
+
+def escape_html(text):
+    return html.escape(text, quote=False)
+
+def build_post_html(title, body, video_url=None, is_youtube=False):
+    title_esc = escape_html(title)
+    body_formatted = format_news_body(body) if body else ""
+
+    parts = [f"<b>{title_esc}</b>"]
+
+    if body_formatted:
+        parts.append("──────────")
+        parts.append(body_formatted)
+
+    if video_url and is_youtube:
+        parts.append("")
+        parts.append(f'🎬 <a href="{video_url}">Смотреть видео</a>')
+
+    return "\n".join(parts)
+
+def send_post(title, body, image_url, video_url, is_youtube):
+    if image_url:
+        body_for_caption = smart_truncate(body, 900) if body else ""
+        caption = build_post_html(title, body_for_caption, video_url, is_youtube)
+        try:
+            r = requests.head(image_url, timeout=5)
+            if r.status_code == 200:
+                bot.send_photo(CHANNEL_ID, image_url, caption=caption, parse_mode='HTML')
+                return
+        except Exception as e:
+            print(f"Не удалось отправить фото: {e}")
+
+    if video_url and not is_youtube:
+        body_for_caption = smart_truncate(body, 900) if body else ""
+        caption = build_post_html(title, body_for_caption)
+        try:
+            bot.send_video(CHANNEL_ID, video_url, caption=caption, parse_mode='HTML')
+            return
+        except Exception as e:
+            print(f"Не удалось отправить видео: {e}")
+
+    body_for_message = smart_truncate(body, 3500) if body else ""
+    message = build_post_html(title, body_for_message, video_url, is_youtube)
+    bot.send_message(CHANNEL_ID, message, parse_mode='HTML')
+
 def main():
     posted_links = load_posted()
     new_posts = 0
@@ -227,28 +329,10 @@ def main():
         title = entry.get('title', 'Без названия')
         full_text = fetch_full_text(entry)
         image_url = fetch_image_url(entry)
-
-        if full_text:
-            full_post = title + "\n\n" + full_text
-        else:
-            full_post = title
+        video_url, is_youtube = fetch_video_info(entry)
 
         try:
-            if image_url:
-                try:
-                    r = requests.head(image_url, timeout=5)
-                    if r.status_code == 200:
-                        caption = smart_truncate(full_post, 1024, link)
-                        bot.send_photo(CHANNEL_ID, image_url, caption=caption)
-                    else:
-                        text_only = smart_truncate(full_post, 4000, link)
-                        bot.send_message(CHANNEL_ID, text_only)
-                except:
-                    text_only = smart_truncate(full_post, 4000, link)
-                    bot.send_message(CHANNEL_ID, text_only)
-            else:
-                text_only = smart_truncate(full_post, 4000, link)
-                bot.send_message(CHANNEL_ID, text_only)
+            send_post(title, full_text, image_url, video_url, is_youtube)
 
             posted_links.add(link)
             new_posts += 1
