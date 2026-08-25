@@ -4,7 +4,6 @@ import html
 import feedparser
 import telebot
 import requests
-import pymorphy3
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from telebot import types
@@ -25,7 +24,6 @@ POSTED_FILE = "posted.txt"
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-morph = pymorphy3.MorphAnalyzer()   # для нормализации слов
 
 def load_posted():
     if not os.path.exists(POSTED_FILE):
@@ -116,11 +114,10 @@ def extract_image_from_page(soup, page_url=None):
     if not soup:
         return None
 
-    # Перечень селекторов для обоих сайтов
     selectors = [
-        'div.editor-body-image img',
+        'div.editor-body-image img',   # Goha.ru
         'div.editor-body img',
-        'div.news_cover_center img',
+        'div.news_cover_center img',   # КГ-Портал
         'div.news_text img',
         'div.news_box img',
         'article img',
@@ -129,12 +126,10 @@ def extract_image_from_page(soup, page_url=None):
     for selector in selectors:
         img_tag = soup.select_one(selector)
         if img_tag:
-            # Проверяем атрибуты src, data-src, data-original
             src = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-original')
             if src:
                 return make_absolute(src, page_url or 'https://kg-portal.ru')
-    
-    # og:image
+
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
         return make_absolute(og_image['content'], page_url or 'https://kg-portal.ru')
@@ -151,7 +146,6 @@ def fetch_image_url(entry, soup=None):
         if image:
             return image
 
-    # Fallback на RSS
     image = extract_image_url_from_entry(entry)
     if image:
         return image
@@ -201,19 +195,16 @@ def extract_video_url_from_page(soup):
     if not soup:
         return None, False
 
-    # 1. Goha.ru: editor-body-youtube
     yt_tag = soup.select_one('editor-body-youtube')
     if yt_tag and yt_tag.get('url'):
         url = yt_tag['url']
         if is_youtube_video(url):
             return url, True
 
-    # 2. YouTube iframe (embed)
     iframe = soup.select_one('iframe[src*="youtube.com/embed"], iframe[src*="youtu.be/"]')
     if iframe and iframe.get('src'):
         return iframe['src'], True
 
-    # 3. Прямой video тег
     video_tag = soup.select_one('video')
     if video_tag:
         src = video_tag.get('src')
@@ -223,7 +214,6 @@ def extract_video_url_from_page(soup):
         if source_tag and source_tag.get('src'):
             return source_tag['src'], False
 
-    # 4. og:video
     og_video = soup.select_one('meta[property="og:video"]')
     if og_video and og_video.get('content'):
         url = og_video['content']
@@ -231,17 +221,14 @@ def extract_video_url_from_page(soup):
             return url, True
         return url, False
 
-    # 5. КГ-Портал: ссылки с классом "youtube"
     for a in soup.select('a.youtube'):
         href = a.get('href', '')
-        # Извлекаем URL из параметра url=...
         match = re.search(r'url=([^&]+)', href)
         if match:
             url = html.unescape(match.group(1))
             if is_youtube_video(url):
                 return url, True
 
-    # 6. Поиск видеофайлов в скриптах (mp4/webm)
     scripts = soup.find_all('script')
     script_text = ' '.join(s.get_text() for s in scripts)
     pattern = r'(?:sources|vodQualities)[^{]*?["\']src["\']\s*:\s*["\']([^"\']+\.(?:mp4|webm))'
@@ -353,22 +340,14 @@ def escape_html(text):
     return html.escape(text, quote=False)
 
 def make_hashtag(text):
-    """
-    Преобразует название аниме в хэштег.
-    Слова приводятся к нормальной форме через pymorphy3,
-    затем соединяются символом '_' и переводятся в нижний регистр.
-    """
+    """Преобразует название аниме в хэштег: нижний регистр, пробелы в '_', без изменения формы слов."""
     words = text.strip().split()
     clean_words = []
     for w in words:
+        # Убираем все символы, кроме букв и цифр (сохраняем пробелы)
         clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
         if clean_w:
-            try:
-                parsed = morph.parse(clean_w)[0]
-                normal = parsed.normal_form
-            except Exception:
-                normal = clean_w
-            clean_words.append(normal.lower())
+            clean_words.append(clean_w.lower())
     if not clean_words:
         return None
     return '#' + '_'.join(clean_words)
@@ -403,7 +382,6 @@ def build_post_html(title, body, emoji='📄'):
     return "\n".join(parts)
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
-    # Определяем эмодзи для заголовка
     if video_url and is_youtube:
         emoji = '🎬'
     elif video_url and not is_youtube:
@@ -413,7 +391,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
-    # Готовим тело: если есть фото, сокращаем до 800, иначе до 3000
     if image_url:
         body = smart_truncate(body, 800) if body else ""
     else:
@@ -426,7 +403,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
-    # Отправка прямого видео (mp4/webm)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -434,7 +410,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # Отправка фото
     if image_url:
         try:
             bot.send_photo(CHANNEL_ID, image_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -442,7 +417,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить фото: {e}")
 
-    # Обычное сообщение
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 def main():
