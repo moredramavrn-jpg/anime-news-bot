@@ -210,32 +210,52 @@ def extract_video_url_from_page(soup):
     if not soup:
         return None, False
 
+    # 1. Прямые видеофайлы (mp4/webm) – приоритет
+    # 1.1. Тег <video> и его <source>
+    video_tag = soup.select_one('video')
+    if video_tag:
+        src = video_tag.get('src')
+        if src and re.search(r'\.(mp4|webm)(\?.*)?$', src, re.IGNORECASE):
+            return src, False
+        source_tag = video_tag.select_one('source')
+        if source_tag and source_tag.get('src') and re.search(r'\.(mp4|webm)(\?.*)?$', source_tag['src'], re.IGNORECASE):
+            return source_tag['src'], False
+
+    # 1.2. og:video с прямым файлом
+    og_video = soup.select_one('meta[property="og:video"]')
+    if og_video and og_video.get('content'):
+        url = og_video['content']
+        if re.search(r'\.(mp4|webm)(\?.*)?$', url, re.IGNORECASE):
+            return url, False
+
+    # 1.3. Скрипты: поиск sources/vodQualities с mp4/webm
+    scripts = soup.find_all('script')
+    script_text = ' '.join(s.get_text() for s in scripts)
+    pattern = r'(?:sources|vodQualities)[^{]*?["\']src["\']\s*:\s*["\']([^"\']+\.(?:mp4|webm))'
+    match = re.search(pattern, script_text, re.IGNORECASE)
+    if match:
+        return html.unescape(match.group(1)), False
+
+    # 2. YouTube видео
+    # 2.1. Goha.ru: editor-body-youtube
     yt_tag = soup.select_one('editor-body-youtube')
     if yt_tag and yt_tag.get('url'):
         url = yt_tag['url']
         if is_youtube_video(url):
             return url, True
 
+    # 2.2. YouTube iframe (embed)
     iframe = soup.select_one('iframe[src*="youtube.com/embed"], iframe[src*="youtu.be/"]')
     if iframe and iframe.get('src'):
         return iframe['src'], True
 
-    video_tag = soup.select_one('video')
-    if video_tag:
-        src = video_tag.get('src')
-        if src:
-            return src, False
-        source_tag = video_tag.select_one('source')
-        if source_tag and source_tag.get('src'):
-            return source_tag['src'], False
-
-    og_video = soup.select_one('meta[property="og:video"]')
+    # 2.3. og:video с YouTube
     if og_video and og_video.get('content'):
         url = og_video['content']
         if is_youtube_video(url):
             return url, True
-        return url, False
 
+    # 2.4. КГ-Портал: ссылки с классом "youtube"
     for a in soup.select('a.youtube'):
         href = a.get('href', '')
         match = re.search(r'url=([^&]+)', href)
@@ -243,13 +263,6 @@ def extract_video_url_from_page(soup):
             url = html.unescape(match.group(1))
             if is_youtube_video(url):
                 return url, True
-
-    scripts = soup.find_all('script')
-    script_text = ' '.join(s.get_text() for s in scripts)
-    pattern = r'(?:sources|vodQualities)[^{]*?["\']src["\']\s*:\s*["\']([^"\']+\.(?:mp4|webm))'
-    match = re.search(pattern, script_text, re.IGNORECASE)
-    if match:
-        return html.unescape(match.group(1)), False
 
     return None, False
 
@@ -341,7 +354,6 @@ def format_news_body(text):
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = re.sub(r' {2,}', ' ', text).strip()
 
-    # Убираем нежелательные фразы
     unwanted_phrases = [
         r'Читать дальше\s*→?',
         r'Читать полностью\s*:?',
@@ -436,23 +448,18 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
 
     message_text = build_post_html(title, body, emoji)
 
-    # Кнопка для YouTube
-    keyboard = None
-    if video_url and is_youtube:
-        keyboard = types.InlineKeyboardMarkup(row_width=1)
-        keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
-
-    # Приоритет: видео (прямое), затем видео (YouTube), затем картинка, затем текст
+    # Приоритет: прямое видео (mp4/webm) -> YouTube -> картинка -> текст
     if video_url and not is_youtube:
         try:
-            bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
+            bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML')
             return
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
     if video_url and is_youtube:
-        # Отправляем текстовое сообщение с кнопкой (картинку не отправляем)
-        bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
+        # Для YouTube отправляем сообщение с ссылкой без кнопки (Telegram покажет превью)
+        # Можно также оставить кнопку, если нужно. Здесь убираем кнопку.
+        bot.send_message(CHANNEL_ID, message_text + f"\n\nСмотреть: {video_url}", parse_mode='HTML', disable_web_page_preview=False)
         return
 
     if image_url:
@@ -464,7 +471,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
             except Exception as e:
                 print(f"Не удалось отправить фото: {e}")
 
-    # Если ничего не отправлено, отправляем текст
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True)
 
 def main():
