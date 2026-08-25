@@ -422,6 +422,24 @@ def build_post_html(title, body, emoji='📄'):
 
     return "\n".join(parts)
 
+def is_podcast_entry(entry):
+    """
+    Определяет, является ли запись выпуском подкаста (например, ЕВА-699).
+    Проверяем заголовок на паттерн "ЕВА-" и наличие "comments" в ссылке.
+    """
+    title = entry.get('title', '')
+    link = entry.get('link', '')
+    # Проверка по заголовку: начинается с "ЕВА-" (регистр не важен)
+    if re.match(r'^ЕВА-\d+', title, re.IGNORECASE):
+        return True
+    # Если заголовок содержит "ЕВА" и в URL есть "/comments/"
+    if 'ЕВА' in title.upper() and '/comments/' in link:
+        return True
+    # Дополнительно: если в URL есть паттерн "/eva" или "eva-"
+    if re.search(r'/eva\d+', link, re.IGNORECASE):
+        return True
+    return False
+
 def send_post(title, body, link, image_url, video_url, is_youtube):
     if video_url and is_youtube:
         emoji = '🎬'
@@ -483,6 +501,11 @@ def main():
             continue
 
         for entry in feed.entries[:10]:
+            # Пропускаем выпуски подкастов
+            if is_podcast_entry(entry):
+                print(f"Пропущен подкаст: {entry.get('title')}")
+                continue
+
             link = entry.get('link', '')
             if not link or link in posted_links:
                 continue
