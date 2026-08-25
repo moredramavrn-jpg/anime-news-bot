@@ -1,6 +1,7 @@
 import os
 import re
 import html
+import io
 import feedparser
 import telebot
 import requests
@@ -13,6 +14,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 HF_API_KEY = os.getenv("HF_API_KEY")
 
+# Источники RSS
 RSS_URLS = [
     "https://www.goha.ru/rss/anime",
     "https://kg-portal.ru/rss/news_anime.rss"
@@ -53,11 +55,13 @@ def make_absolute(url, base_domain):
 
 def get_page_soup(url):
     try:
+        # Определяем домен для правильного Referer
+        domain = urlparse(url).netloc
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-            'Referer': 'https://www.goha.ru/',
+            'Referer': f'https://{domain}/',
         }
         r = requests.get(url, headers=headers, timeout=15)
         r.raise_for_status()
@@ -70,10 +74,13 @@ def extract_full_text_from_page(soup):
     if not soup:
         return ""
 
+    # Goha.ru: div.editor-body
     main_content = soup.select_one('div.editor-body')
+    # КГ-Портал: div.news_text
     if not main_content:
         main_content = soup.select_one('div.news_text')
 
+    # Запасные селекторы
     if not main_content:
         selectors = [
             'article', 'div.news-content', 'div.content', 'div.news-text',
@@ -104,7 +111,6 @@ def fetch_full_text(entry):
         return clean_html(summary)
     return ""
 
-# ========== УЛУЧШЕННОЕ ИЗВЛЕЧЕНИЕ КАРТИНОК ==========
 def extract_image_from_page(soup, page_url=None):
     if not soup:
         return None
@@ -117,7 +123,7 @@ def extract_image_from_page(soup, page_url=None):
         'div.news_text img',
         'div.news_box img',
         'article img',
-        'div.news_image img',             # возможные варианты КГ
+        'div.news_image img',
         'div.article_image img',
         'div.full_news img',
         'div.news_content img',
@@ -132,7 +138,7 @@ def extract_image_from_page(soup, page_url=None):
             if src:
                 return make_absolute(src, page_url or 'https://kg-portal.ru')
 
-    # Если точные селекторы не сработали, ищем все img внутри div.news_text (если он есть)
+    # Если точные селекторы не сработали, ищем все img внутри div.news_text
     news_text = soup.select_one('div.news_text')
     if news_text:
         for img in news_text.find_all('img'):
@@ -154,7 +160,6 @@ def extract_image_from_page(soup, page_url=None):
             return make_absolute(src, page_url or 'https://kg-portal.ru')
 
     return None
-# ==================================================
 
 def fetch_image_url(entry, soup=None):
     link = entry.get('link')
@@ -166,7 +171,6 @@ def fetch_image_url(entry, soup=None):
         if image:
             return image
 
-    # Fallback на RSS
     image = extract_image_url_from_entry(entry)
     if image:
         return image
@@ -267,6 +271,21 @@ def fetch_video_info(entry, soup=None):
         return extract_video_url_from_page(soup)
     return None, False
 
+def download_image(url, referer=None):
+    """Скачивает изображение и возвращает BytesIO."""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        if referer:
+            headers['Referer'] = referer
+        r = requests.get(url, headers=headers, timeout=15)
+        r.raise_for_status()
+        return io.BytesIO(r.content)
+    except Exception as e:
+        print(f"Не удалось скачать изображение {url}: {e}")
+        return None
+
 def simple_truncate_by_sentences(text, max_len):
     if len(text) <= max_len:
         return text
@@ -360,6 +379,7 @@ def escape_html(text):
     return html.escape(text, quote=False)
 
 def make_hashtag(text):
+    """Преобразует название аниме в хэштег: нижний регистр, пробелы в '_'."""
     words = text.strip().split()
     clean_words = []
     for w in words:
@@ -400,6 +420,7 @@ def build_post_html(title, body, emoji='📄'):
     return "\n".join(parts)
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
+    # Определяем эмодзи для заголовка
     if video_url and is_youtube:
         emoji = '🎬'
     elif video_url and not is_youtube:
@@ -409,6 +430,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
+    # Готовим тело: если есть фото, сокращаем до 800, иначе до 3000
     if image_url:
         body = smart_truncate(body, 800) if body else ""
     else:
@@ -421,6 +443,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
+    # Отправка прямого видео (mp4/webm)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -428,13 +451,17 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
+    # Отправка фото (скачиваем сами для обхода hotlink-защиты)
     if image_url:
-        try:
-            bot.send_photo(CHANNEL_ID, image_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
-            return
-        except Exception as e:
-            print(f"Не удалось отправить фото: {e}")
+        image_file = download_image(image_url, referer=link)
+        if image_file:
+            try:
+                bot.send_photo(CHANNEL_ID, image_file, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
+                return
+            except Exception as e:
+                print(f"Не удалось отправить фото: {e}")
 
+    # Обычное сообщение
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 def main():
