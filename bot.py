@@ -4,18 +4,17 @@ import feedparser
 import telebot
 import requests
 from bs4 import BeautifulSoup
-from groq import Groq
 
 # ===== НАСТРОЙКИ =====
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+HF_API_KEY = os.getenv("HF_API_KEY")
 
 RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
-client = Groq(api_key=GROQ_API_KEY)
-MODEL_NAME = "qwen/qwen3.6-27b"   # более сильная модель для русского
+# Модель Hugging Face (можно заменить на другую, например, "mistralai/Mistral-7B-Instruct-v0.3")
+HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -139,24 +138,10 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
-def clean_groq_response(text):
-    """Удаляет <think> и всё до последнего </think>, а также HTML-теги."""
-    end_idx = text.rfind('</think>')
-    if end_idx != -1:
-        text = text[end_idx + len('</think>'):].strip()
-    else:
-        start_idx = text.find('<think>')
-        if start_idx != -1:
-            text = text[start_idx + len('<think>'):].strip()
-    text = re.sub(r'<[^>]+>', '', text)
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return "\n".join(lines)
-
 def simple_truncate_by_sentences(text, max_len):
     """Обрезает текст до max_len символов, стараясь завершить на границе предложения."""
     if len(text) <= max_len:
         return text
-    # Разбиваем на предложения
     sentences = re.split(r'(?<=[.!?])\s+', text)
     result = ""
     for s in sentences:
@@ -164,45 +149,57 @@ def simple_truncate_by_sentences(text, max_len):
             break
         result = (result + " " + s).strip()
     if not result:
-        # Если даже первое предложение длинное, просто обрезаем
         return text[:max_len]
     return result
 
+def call_hf_api(prompt):
+    """Отправляет запрос к Hugging Face Inference API и возвращает ответ."""
+    headers = {
+        "Authorization": f"Bearer {HF_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 512,
+            "temperature": 0.3,
+            "return_full_text": False
+        }
+    }
+    try:
+        response = requests.post(HF_MODEL_URL, headers=headers, json=payload, timeout=20)
+        response.raise_for_status()
+        result = response.json()
+        # Обработка разных форматов ответа
+        if isinstance(result, list) and len(result) > 0:
+            return result[0].get('generated_text', '').strip()
+        elif isinstance(result, dict):
+            return result.get('generated_text', '').strip()
+        else:
+            return str(result).strip()
+    except Exception as e:
+        print(f"Ошибка при обращении к Hugging Face: {e}")
+        return None
+
 def smart_truncate(text, max_len):
-    """Переводит и сокращает текст через Groq, если он длиннее max_len."""
+    """Сокращает и переводит текст через Hugging Face, если он длиннее max_len."""
     if len(text) <= max_len:
         return text
 
-    prompt = f"""Напиши краткий пересказ следующей новости на русском языке. Объём пересказа должен быть не более {max_len} символов. Сохрани все важные факты, имена, названия. Не добавляй ничего от себя. Не выводи никаких пояснений, только пересказ.
+    prompt = f"""Напиши краткий пересказ следующей новости на русском языке. Объём пересказа должен быть не более {max_len} символов. Сохрани все важные факты, имена, названия. Не добавляй ничего от себя.
 
 Новость:
 {text}
 """
-    try:
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": "Ты — редактор, который делает краткие пересказы новостей на русском языке."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3,
-            max_tokens=800
-        )
-        raw = response.choices[0].message.content.strip()
-        shortened = clean_groq_response(raw)
+    shortened = call_hf_api(prompt)
 
-        # Проверяем, что результат есть и он короче исходного
-        if len(shortened) < 50:
-            print("Модель вернула слишком короткий ответ, используем обрезание по предложениям")
-            return simple_truncate_by_sentences(text, max_len)
-
+    if shortened and len(shortened) >= 50:
+        # Если модель вернула текст с остатками промпта, попробуем обрезать до нужной длины
         if len(shortened) > max_len:
-            # Если всё равно длиннее лимита, обрезаем по предложениям
             shortened = simple_truncate_by_sentences(shortened, max_len)
-
         return shortened
-    except Exception as e:
-        print(f"Ошибка при сокращении через Groq: {e}")
+    else:
+        print("Hugging Face не справился, используем обрезание по предложениям")
         return simple_truncate_by_sentences(text, max_len)
 
 def main():
