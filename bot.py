@@ -102,7 +102,6 @@ def extract_image_from_page(soup):
     return None
 
 def fetch_image_url(entry, soup=None):
-    """Получает URL картинки. Если передан soup, использует его, иначе загружает страницу."""
     if soup is None:
         link = entry.get('link')
         if link:
@@ -111,7 +110,6 @@ def fetch_image_url(entry, soup=None):
         image = extract_image_from_page(soup)
         if image:
             return image
-    # Fallback на RSS
     return extract_image_url_from_entry(entry)
 
 def extract_image_url_from_entry(entry):
@@ -176,7 +174,6 @@ def extract_video_url_from_page(soup):
     return None, False
 
 def fetch_video_info(entry, soup=None):
-    """Получает информацию о видео. Если передан soup, использует его."""
     if soup is None:
         link = entry.get('link')
         if link:
@@ -280,39 +277,34 @@ def escape_html(text):
     return html.escape(text, quote=False)
 
 def make_hashtag(text):
-    """Преобразует текст в CamelCase-хэштег без пробелов и спецсимволов."""
     words = text.strip().split()
     clean_words = []
     for w in words:
-        # Оставляем только буквы и цифры
         clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
         if clean_w:
-            # Первая буква заглавная, остальные как есть
             clean_words.append(clean_w[0].upper() + clean_w[1:] if len(clean_w) > 1 else clean_w.upper())
     if not clean_words:
         return None
     return '#' + ''.join(clean_words)
 
 def extract_title_hashtag(title):
-    """Извлекает название аниме из заголовка и делает из него хэштег в CamelCase."""
-    # Ищем текст в русских кавычках « »
     match = re.search(r'«([^»]+)»', title)
     if not match:
-        # Ищем в кавычках ""
         match = re.search(r'"([^"]+)"', title)
     if match:
         anime_name = match.group(1).strip()
         return make_hashtag(anime_name)
     return None
 
-def build_post_html(title, body):
+def build_post_html(title, body, emoji='📄'):
+    """Собирает HTML-текст поста с эмодзи и хэштегами."""
     title_esc = escape_html(title)
     body_formatted = format_news_body(body) if body else ""
 
-    parts = [f"<b>{title_esc}</b>"]
+    parts = [f"{emoji} <b>{title_esc}</b>"]
 
     if body_formatted:
-        parts.append("──────────")
+        parts.append("┄┄┄ ✦ ┄┄┄")
         parts.append(body_formatted)
 
     hashtags = ["#аниме", "#новости"]
@@ -321,12 +313,22 @@ def build_post_html(title, body):
         hashtags.append(title_tag)
 
     parts.append("")
-    parts.append(" ".join(hashtags))
+    parts.append("🏷️ " + " ".join(hashtags))
 
     return "\n".join(parts)
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
-    message_text = build_post_html(title, body)
+    # Определяем эмодзи для заголовка
+    if video_url and is_youtube:
+        emoji = '🎬'
+    elif video_url and not is_youtube:
+        emoji = '🎞️'
+    elif image_url:
+        emoji = '🖼️'
+    else:
+        emoji = '📄'
+
+    message_text = build_post_html(title, body, emoji)
 
     keyboard = None
     if video_url and is_youtube:
@@ -370,14 +372,9 @@ def main():
 
         title = entry.get('title', 'Без названия')
 
-        # Загружаем страницу один раз (если возможно)
         soup = get_page_soup(link) if link else None
-
-        # Получаем полный текст (используя soup, если он есть)
         full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
-        # Получаем картинку (используя soup, если он есть)
         image_url = fetch_image_url(entry, soup)
-        # Получаем видео (используя soup, если он есть)
         video_url, is_youtube = fetch_video_info(entry, soup)
 
         try:
