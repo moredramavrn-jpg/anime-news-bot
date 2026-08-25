@@ -180,43 +180,6 @@ def fetch_video_info(entry):
             return extract_video_url_from_page(soup)
     return None, False
 
-def extract_tags(entry, soup):
-    """
-    Извлекает теги новости из RSS или со страницы, очищает их и возвращает не более 5.
-    """
-    tags = []
-    if 'tags' in entry:
-        for tag in entry.tags:
-            term = tag.get('term', '').strip()
-            if term:
-                tags.append(term)
-    if soup:
-        for meta in soup.select('meta[property="og:tag"]'):
-            content = meta.get('content', '').strip()
-            if content:
-                tags.append(content)
-        if not tags:
-            tag_links = soup.select('div.article-tags a')
-            for a in tag_links:
-                t = a.get_text(strip=True)
-                if t:
-                    tags.append(t)
-
-    # Очистка: оставляем только буквы, цифры, дефис и подчёркивание
-    clean_tags = []
-    seen = set()
-    for t in tags:
-        # Удаляем все символы, кроме \w (буквы/цифры/_ ) и дефиса
-        t = re.sub(r'[^\w\-]', '', t, flags=re.UNICODE)
-        if not t:
-            continue
-        if len(t) > 20:
-            t = t[:20]
-        if t not in seen:
-            seen.add(t)
-            clean_tags.append(t)
-    return clean_tags[:5]
-
 def simple_truncate_by_sentences(text, max_len):
     if len(text) <= max_len:
         return text
@@ -311,47 +274,54 @@ def format_news_body(text):
 def escape_html(text):
     return html.escape(text, quote=False)
 
-def build_post_html(title, body, tags, date_str):
-    """
-    Собирает итоговый текст поста с тегами.
-    Всегда добавляет #аниме и #новости, затем специфические теги.
-    """
+def extract_title_hashtag(title):
+    """Извлекает название аниме из заголовка и делает из него хэштег."""
+    # Ищем текст в русских кавычках « »
+    match = re.search(r'«([^»]+)»', title)
+    if not match:
+        # Если нет, ищем в кавычках ""
+        match = re.search(r'"([^"]+)"', title)
+    if match:
+        anime_name = match.group(1).strip()
+        # Убираем пробелы и делаем заглавными первые буквы слов
+        hashtag = re.sub(r'\s+', '', anime_name)
+        if hashtag:
+            # Убираем все символы, кроме букв/цифр
+            hashtag = re.sub(r'[^\w]', '', hashtag, flags=re.UNICODE)
+            if hashtag:
+                return f"#{hashtag}"
+    return None
+
+def build_post_html(title, body):
     title_esc = escape_html(title)
     body_formatted = format_news_body(body) if body else ""
 
     parts = [f"<b>{title_esc}</b>"]
 
-    if date_str:
-        parts.append(f"<i>{date_str}</i>")
-
     if body_formatted:
         parts.append("──────────")
         parts.append(body_formatted)
 
-    # Добавляем базовые хэштеги
+    # Базовые хэштеги
     hashtags = ["#аниме", "#новости"]
-    for tag in tags:
-        tag_hashtag = f"#{tag}"
-        if tag_hashtag not in hashtags:
-            hashtags.append(tag_hashtag)
-    # Ограничим общее количество хэштегов (например, 7)
-    hashtags = hashtags[:7]
+    # Добавляем тег из названия (если есть)
+    title_tag = extract_title_hashtag(title)
+    if title_tag and title_tag not in hashtags:
+        hashtags.append(title_tag)
 
     parts.append("")
     parts.append(" ".join(hashtags))
 
     return "\n".join(parts)
 
-def send_post(title, body, tags, date_str, link, image_url, video_url, is_youtube):
-    """Отправляет пост. Кнопка «Читать полностью» убрана, осталась только «Смотреть видео» при наличии YouTube."""
-    message_text = build_post_html(title, body, tags, date_str)
+def send_post(title, body, link, image_url, video_url, is_youtube):
+    message_text = build_post_html(title, body)
 
     keyboard = None
     if video_url and is_youtube:
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
-    # Прямое видео (mp4/webm)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -359,7 +329,6 @@ def send_post(title, body, tags, date_str, link, image_url, video_url, is_youtub
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # Фото
     if image_url:
         try:
             r = requests.head(image_url, timeout=5)
@@ -370,7 +339,6 @@ def send_post(title, body, tags, date_str, link, image_url, video_url, is_youtub
         except Exception as e:
             print(f"Не удалось отправить фото: {e}")
 
-    # Обычное сообщение
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 def main():
@@ -395,14 +363,9 @@ def main():
         full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
         image_url = fetch_image_url(entry)
         video_url, is_youtube = fetch_video_info(entry)
-        tags = extract_tags(entry, soup)
-
-        date_str = entry.get('published', '') or entry.get('updated', '')
-        if date_str:
-            date_str = date_str.split('T')[0]
 
         try:
-            send_post(title, full_text, tags, date_str, link, image_url, video_url, is_youtube)
+            send_post(title, full_text, link, image_url, video_url, is_youtube)
             posted_links.add(link)
             new_posts += 1
             print(f"Опубликовано: {title}")
