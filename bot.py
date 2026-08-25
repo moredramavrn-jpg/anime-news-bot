@@ -4,18 +4,18 @@ import feedparser
 from groq import Groq
 import telebot
 import requests
+from bs4 import BeautifulSoup
 
-# ===== НАСТРОЙКИ (берутся из секретов GitHub) =====
+# ===== НАСТРОЙКИ =====
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-# ===== ИСТОЧНИКИ RSS =====
+# ===== ИСТОЧНИКИ (RSS + Канобу) =====
 RSS_URLS = [
-    "https://www.animenewsnetwork.com/news/rss.xml",
-    "https://www.crunchyroll.com/news/rss",
-    "https://myanimelist.net/rss/news.xml"
-]
+    ]
+
+KANOBU_URL = "https://kanobu.ru/anime/"
 
 POSTED_FILE = "posted.txt"
 
@@ -34,7 +34,6 @@ def save_posted(posted_links):
             f.write(link + '\n')
 
 def clean_thinking(text):
-    """Удаляет блок <think>...</think>, если модель его добавила."""
     if '<think>' in text:
         end_idx = text.find('</think>')
         if end_idx != -1:
@@ -46,20 +45,15 @@ def clean_thinking(text):
     return text.strip()
 
 def generate_post(title, summary):
-    prompt = f"""Ты — редактор популярного аниме-канала в Telegram. Тебе дали новость (на английском или другом языке).
-Твоя задача — НЕ просто перевести её, а сделать уникальный пост, который не выглядит как копипаст.
+    prompt = f"""Ты — редактор популярного аниме-канала в Telegram. Тебе дали новость (на русском или английском).
+Твоя задача — сделать из неё уникальный пост, который не выглядит как копипаст.
 
 Правила:
-1. Внимательно прочитай исходную новость.
-2. Перескажи её своими словами, сохраняя все ключевые факты (названия, даты, имена).
-3. Избегай дословного перевода и повторения структуры исходного текста.
-4. Добавь немного живости: можно выразить лёгкую эмоцию (удивление, радость, ожидание), но не перегибай.
-5. Напиши пост на русском языке, от первого лица (как будто ты сам сообщаешь эту новость подписчикам).
-6. Обязательно укажи хэштеги #аниме #новости.
-7. Используй 2-3 уместных эмодзи.
-8. Длина поста: 3-5 предложений (не слишком длинно).
-
-ВАЖНО: Выведи ТОЛЬКО готовый пост. Не выводи никаких пояснений, мыслей или тегов <think>.
+1. Перескажи своими словами, сохраняя ключевые факты.
+2. Пиши на русском языке, от первого лица.
+3. Добавь 2-3 эмодзи и хэштеги #аниме #новости.
+4. Длина поста: 3-5 предложений.
+5. Выведи ТОЛЬКО пост, без пояснений.
 
 Исходная новость:
 Заголовок: {title}
@@ -69,9 +63,9 @@ def generate_post(title, summary):
 
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-20b",   # <-- Новая модель
+            model="openai/gpt-oss-20b",   # или qwen/qwen3.6-27b
             messages=[
-                {"role": "system", "content": "Ты — талантливый копирайтер. Ты всегда пишешь уникальные, живые тексты на русском языке."},
+                {"role": "system", "content": "Ты — талантливый копирайтер аниме-канала."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.9,
@@ -85,37 +79,77 @@ def generate_post(title, summary):
         return f"{title}\n\n{summary[:200]}...\n\n#аниме #новости"
 
 def extract_image_url(entry):
-    if 'media_content' in entry:
-        for media in entry.media_content:
-            if 'url' in media:
-                return media['url']
-    if 'media_thumbnail' in entry:
-        for media in entry.media_thumbnail:
-            if 'url' in media:
-                return media['url']
-    if 'enclosures' in entry and entry.enclosures:
-        for enc in entry.enclosures:
-            if 'href' in enc and enc.get('type', '').startswith('image'):
-                return enc['href']
-            if 'url' in enc and enc.get('type', '').startswith('image'):
-                return enc['url']
-    summary = entry.get('summary', '') or entry.get('description', '')
-    if summary:
-        match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', summary, re.IGNORECASE)
-        if match:
-            return match.group(1)
-    content = entry.get('content', [])
-    for c in content:
-        if 'value' in c:
-            match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', c['value'], re.IGNORECASE)
-            if match:
-                return match.group(1)
-    return None
+    # ... (оставьте как в предыдущем коде)
+    # Для краткости здесь опущено, но вы можете вставить свою реализацию
+    pass
 
+# ===== ПАРСЕР КАНОБУ =====
+def fetch_kanobu_news():
+    """
+    Загружает страницу Канобу и возвращает список новостей в формате:
+    [{ 'title': str, 'link': str, 'summary': str, 'image_url': str }]
+    """
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        r = requests.get(KANOBU_URL, headers=headers, timeout=15)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'lxml')
+
+        news_items = []
+
+        # Ищем блоки новостей. В HTML есть секции с тегами <article> внутри <a href="/news/...">
+        # Берём все ссылки на /news/ и рядом с ними заголовки и картинки
+        for a in soup.select('a[href^="/news/"]'):
+            href = a.get('href')
+            if not href:
+                continue
+            full_link = "https://kanobu.ru" + href
+
+            # Ищем заголовок внутри этой ссылки или рядом
+            title_tag = a.select_one('p')
+            if not title_tag:
+                title_tag = a.find_parent('article').select_one('p') if a.find_parent('article') else None
+            if not title_tag:
+                continue
+            title = title_tag.get_text(strip=True)
+            if not title:
+                continue
+
+            # Ищем картинку поблизости
+            img_tag = a.select_one('img')
+            if not img_tag and a.find_parent('article'):
+                img_tag = a.find_parent('article').select_one('img')
+            image_url = img_tag.get('src') if img_tag else None
+
+            # Описание чаще всего отсутствует на главной, поэтому оставим пустым
+            summary = ""
+
+            news_items.append({
+                'title': title,
+                'link': full_link,
+                'summary': summary,
+                'image_url': image_url
+            })
+
+        # Убираем дубли по ссылке
+        unique = []
+        seen = set()
+        for item in news_items:
+            if item['link'] not in seen:
+                seen.add(item['link'])
+                unique.append(item)
+        return unique[:10]  # берём до 10 новостей
+
+    except Exception as e:
+        print(f"Ошибка парсинга Канобу: {e}")
+        return []
+
+# ===== ОСНОВНАЯ ЛОГИКА =====
 def main():
     posted_links = load_posted()
     new_posts = 0
 
+    # 1. Обработка RSS
     for rss_url in RSS_URLS:
         print(f"Обрабатываю ленту: {rss_url}")
         try:
@@ -132,9 +166,9 @@ def main():
             title = entry.get('title', 'Без названия')
             summary = entry.get('summary', '') or entry.get('description', '') or ''
             clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
+            image_url = extract_image_url(entry)
 
             post_text = generate_post(title, clean_summary)
-            image_url = extract_image_url(entry)
 
             try:
                 if image_url:
@@ -151,10 +185,42 @@ def main():
 
                 posted_links.add(link)
                 new_posts += 1
-                print(f"Опубликовано: {title}")
-
+                print(f"Опубликовано (RSS): {title}")
             except Exception as e:
                 print(f"Ошибка отправки для {link}: {e}")
+
+    # 2. Обработка Канобу
+    kanobu_news = fetch_kanobu_news()
+    for item in kanobu_news:
+        link = item['link']
+        if link in posted_links:
+            continue
+
+        title = item['title']
+        summary = item['summary']  # пусто, но можно передать заголовок
+        image_url = item['image_url']
+
+        # Генерируем пост (если summary пустое, передаём заголовок)
+        post_text = generate_post(title, summary or title)
+
+        try:
+            if image_url:
+                try:
+                    r = requests.head(image_url, timeout=5)
+                    if r.status_code == 200:
+                        bot.send_photo(CHANNEL_ID, image_url, caption=post_text)
+                    else:
+                        bot.send_message(CHANNEL_ID, post_text)
+                except:
+                    bot.send_message(CHANNEL_ID, post_text)
+            else:
+                bot.send_message(CHANNEL_ID, post_text)
+
+            posted_links.add(link)
+            new_posts += 1
+            print(f"Опубликовано (Канобу): {title}")
+        except Exception as e:
+            print(f"Ошибка отправки для {link}: {e}")
 
     if new_posts > 0:
         save_posted(posted_links)
