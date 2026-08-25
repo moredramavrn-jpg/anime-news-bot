@@ -6,7 +6,7 @@ on:
   workflow_dispatch:         # ручной запуск
 
 permissions:
-  contents: write            # разрешаем запись в репозиторий
+  contents: write            # разрешаем коммитить posted.txt
 
 jobs:
   post:
@@ -19,7 +19,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install feedparser groq pyTelegramBotAPI
+        run: pip install feedparser groq pyTelegramBotAPI requests
 
       - name: Run bot
         env:
