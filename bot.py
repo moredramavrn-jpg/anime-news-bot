@@ -15,7 +15,7 @@ RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
 client = Groq(api_key=GROQ_API_KEY)
-MODEL_NAME = "openai/gpt-oss-20b"   # <-- модель, которую вы выбрали
+MODEL_NAME = "qwen/qwen3.6-27b"   # более сильная модель для русского
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -141,7 +141,6 @@ def extract_image_url_from_entry(entry):
 
 def clean_groq_response(text):
     """Удаляет <think> и всё до последнего </think>, а также HTML-теги."""
-    # Ищем последний </think>
     end_idx = text.rfind('</think>')
     if end_idx != -1:
         text = text[end_idx + len('</think>'):].strip()
@@ -149,26 +148,41 @@ def clean_groq_response(text):
         start_idx = text.find('<think>')
         if start_idx != -1:
             text = text[start_idx + len('<think>'):].strip()
-    # Убираем возможные остатки тегов
     text = re.sub(r'<[^>]+>', '', text)
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n".join(lines)
+
+def simple_truncate_by_sentences(text, max_len):
+    """Обрезает текст до max_len символов, стараясь завершить на границе предложения."""
+    if len(text) <= max_len:
+        return text
+    # Разбиваем на предложения
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    result = ""
+    for s in sentences:
+        if len(result) + len(s) + 1 > max_len:
+            break
+        result = (result + " " + s).strip()
+    if not result:
+        # Если даже первое предложение длинное, просто обрезаем
+        return text[:max_len]
+    return result
 
 def smart_truncate(text, max_len):
     """Переводит и сокращает текст через Groq, если он длиннее max_len."""
     if len(text) <= max_len:
         return text
 
-    prompt = f"""Ты — редактор новостного канала. Переведи следующий текст на русский язык и сократи его до {max_len} символов, сохранив все ключевые факты и общий смысл. Не выводи никаких пояснений, мыслей или тегов. Выведи только готовый сокращённый текст на русском языке.
+    prompt = f"""Напиши краткий пересказ следующей новости на русском языке. Объём пересказа должен быть не более {max_len} символов. Сохрани все важные факты, имена, названия. Не добавляй ничего от себя. Не выводи никаких пояснений, только пересказ.
 
-Исходный текст:
+Новость:
 {text}
 """
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
-                {"role": "system", "content": "Ты — редактор, который переводит и сокращает тексты без потери смысла."},
+                {"role": "system", "content": "Ты — редактор, который делает краткие пересказы новостей на русском языке."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
@@ -176,15 +190,20 @@ def smart_truncate(text, max_len):
         )
         raw = response.choices[0].message.content.strip()
         shortened = clean_groq_response(raw)
+
+        # Проверяем, что результат есть и он короче исходного
         if len(shortened) < 50:
-            print("Модель вернула слишком короткий ответ, применяем обрезание исходного текста")
-            return text[:max_len]
+            print("Модель вернула слишком короткий ответ, используем обрезание по предложениям")
+            return simple_truncate_by_sentences(text, max_len)
+
         if len(shortened) > max_len:
-            shortened = shortened[:max_len]
+            # Если всё равно длиннее лимита, обрезаем по предложениям
+            shortened = simple_truncate_by_sentences(shortened, max_len)
+
         return shortened
     except Exception as e:
         print(f"Ошибка при сокращении через Groq: {e}")
-        return text[:max_len]
+        return simple_truncate_by_sentences(text, max_len)
 
 def main():
     posted_links = load_posted()
