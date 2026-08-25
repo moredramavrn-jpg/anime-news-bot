@@ -156,7 +156,7 @@ def fetch_image_url(entry, soup=None):
     return None
 
 def extract_image_url_from_entry(entry):
-    base_domain = 'https://www.goha.ru'  # предположим, но лучше определить по link
+    base_domain = 'https://www.goha.ru'
     if 'link' in entry:
         link = entry.get('link', '')
         if 'kg-portal.ru' in link:
@@ -189,19 +189,27 @@ def extract_image_url_from_entry(entry):
                 return make_absolute(match.group(1), base_domain)
     return None
 
+def is_youtube_video(url):
+    """Проверяет, является ли URL конкретным видео YouTube, а не каналом/пользователем."""
+    return ('youtube.com/watch' in url) or ('youtu.be/' in url)
+
 def extract_video_url_from_page(soup):
     if not soup:
         return None, False
 
-    # Goha.ru
+    # Goha.ru: editor-body-youtube
     yt_tag = soup.select_one('editor-body-youtube')
     if yt_tag and yt_tag.get('url'):
-        return yt_tag['url'], True
+        url = yt_tag['url']
+        if is_youtube_video(url):
+            return url, True
 
-    iframe = soup.select_one('iframe[src*="youtube.com"], iframe[src*="youtu.be"]')
+    # YouTube iframe (embed)
+    iframe = soup.select_one('iframe[src*="youtube.com/embed"], iframe[src*="youtu.be/"]')
     if iframe and iframe.get('src'):
         return iframe['src'], True
 
+    # Прямое видео (video тег)
     video_tag = soup.select_one('video')
     if video_tag:
         src = video_tag.get('src')
@@ -211,17 +219,16 @@ def extract_video_url_from_page(soup):
         if source_tag and source_tag.get('src'):
             return source_tag['src'], False
 
+    # og:video
     og_video = soup.select_one('meta[property="og:video"]')
     if og_video and og_video.get('content'):
         url = og_video['content']
-        is_yt = 'youtube.com' in url or 'youtu.be' in url
-        return url, is_yt
+        if is_youtube_video(url):
+            return url, True
+        # если это не youtube, значит прямой файл
+        return url, False
 
-    # Ссылка на YouTube (КГ-Портал)
-    yt_link = soup.select_one('a[href*="youtube.com"], a[href*="youtu.be"]')
-    if yt_link and yt_link.get('href'):
-        return yt_link['href'], True
-
+    # Явно не ищем произвольные ссылки на YouTube, чтобы не цеплять каналы
     return None, False
 
 def fetch_video_info(entry, soup=None):
