@@ -4,15 +4,28 @@ import feedparser
 import telebot
 import requests
 from bs4 import BeautifulSoup
+from groq import Groq
 
+# ===== НАСТРОЙКИ =====
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
+# Инициализация Groq клиента
+client = Groq(api_key=GROQ_API_KEY)
+
+# Можно выбрать другую модель из списка, например:
+# "qwen/qwen3.6-27b"
+# "openai/gpt-oss-120b"
+# "groq/compound-mini"
+MODEL_NAME = "openai/gpt-oss-20b"
+
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
+# ===== ФУНКЦИИ ДЛЯ ХРАНЕНИЯ ОПУБЛИКОВАННЫХ ССЫЛОК =====
 def load_posted():
     if not os.path.exists(POSTED_FILE):
         return set()
@@ -24,6 +37,7 @@ def save_posted(posted_links):
         for link in posted_links:
             f.write(link + '\n')
 
+# ===== ОЧИСТКА HTML =====
 def clean_html(raw_html):
     if not raw_html:
         return ""
@@ -34,6 +48,7 @@ def clean_html(raw_html):
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n".join(lines)
 
+# ===== ЗАГРУЗКА СТРАНИЦЫ =====
 def get_page_soup(url):
     try:
         headers = {
@@ -49,6 +64,7 @@ def get_page_soup(url):
         print(f"Ошибка загрузки {url}: {e}")
         return None
 
+# ===== ИЗВЛЕЧЕНИЕ ТЕКСТА =====
 def extract_full_text_from_page(soup):
     if not soup:
         return ""
@@ -79,19 +95,6 @@ def extract_full_text_from_page(soup):
         return clean_html(str(main_content))
     return ""
 
-def extract_image_from_page(soup):
-    if not soup:
-        return None
-    img_tag = soup.select_one('div.editor-body-image img')
-    if not img_tag:
-        img_tag = soup.select_one('div.editor-body img')
-    if img_tag and img_tag.get('src'):
-        return img_tag['src']
-    og_image = soup.select_one('meta[property="og:image"]')
-    if og_image and og_image.get('content'):
-        return og_image['content']
-    return None
-
 def fetch_full_text(entry):
     link = entry.get('link')
     if link:
@@ -104,6 +107,20 @@ def fetch_full_text(entry):
     if summary:
         return clean_html(summary)
     return ""
+
+# ===== ИЗВЛЕЧЕНИЕ КАРТИНКИ =====
+def extract_image_from_page(soup):
+    if not soup:
+        return None
+    img_tag = soup.select_one('div.editor-body-image img')
+    if not img_tag:
+        img_tag = soup.select_one('div.editor-body img')
+    if img_tag and img_tag.get('src'):
+        return img_tag['src']
+    og_image = soup.select_one('meta[property="og:image"]')
+    if og_image and og_image.get('content'):
+        return og_image['content']
+    return None
 
 def fetch_image_url(entry):
     link = entry.get('link')
@@ -143,26 +160,50 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
-def format_post(title, full_text, link, max_len):
-    """Формирует пост, обрезая при необходимости и добавляя ссылку, если текст был обрезан."""
-    text = title.strip()
-    if full_text:
-        # Вычисляем доступное место для текста с учётом заголовка и возможной ссылки
-        link_part = "...\n\nЧитать полностью: " + link
-        available = max_len - len(text) - len("\n\n") - len(link_part)
-        if available > 0:
-            if len(full_text) <= available:
-                text += "\n\n" + full_text
-            else:
-                text += "\n\n" + full_text[:available] + link_part
-        else:
-            # Заголовок сам слишком длинный, обрезаем его
-            max_title_len = max_len - len(link_part)
-            if max_title_len > 0:
-                text = title[:max_title_len] + link_part
-    # Если full_text пустой, оставляем только заголовок (возможно, стоит добавить ссылку? нет)
-    return text
+# ===== УМНОЕ СОКРАЩЕНИЕ ТЕКСТА (Groq) =====
+def smart_truncate(text, max_len, link):
+    """
+    Если текст помещается в max_len, возвращает его без изменений.
+    Если нет — просит Groq сократить текст до max_len, сохранив смысл,
+    и добавляет ссылку 'Читать полностью'.
+    """
+    if len(text) <= max_len:
+        return text
 
+    link_part = "\n\nЧитать полностью: " + link
+    available = max_len - len(link_part)
+
+    if available < 100:
+        # Места слишком мало, ИИ не поможет — просто обрезаем
+        return text[:max_len - len(link_part)] + link_part
+
+    prompt = f"""Сократи следующий текст новости до {available} символов, сохранив все ключевые факты и общий смысл. Пиши на русском языке. Не добавляй ничего лишнего.
+
+Текст:
+{text}
+"""
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "Ты — редактор, который умеет сокращать тексты без потери смысла."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=available  # ограничиваем количество токенов
+        )
+        shortened = response.choices[0].message.content.strip()
+        if len(shortened) + len(link_part) <= max_len:
+            return shortened + link_part
+        else:
+            # Если ИИ вернул слишком длинно, обрезаем и добавляем ссылку
+            return shortened[:max_len - len(link_part)] + link_part
+    except Exception as e:
+        print(f"Ошибка при сокращении через Groq: {e}")
+        # Fallback: обычное обрезание
+        return text[:max_len - len(link_part)] + link_part
+
+# ===== ОСНОВНАЯ ЛОГИКА =====
 def main():
     posted_links = load_posted()
     new_posts = 0
@@ -183,24 +224,31 @@ def main():
         full_text = fetch_full_text(entry)
         image_url = fetch_image_url(entry)
 
+        # Собираем полный пост (заголовок + текст)
+        if full_text:
+            full_post = title + "\n\n" + full_text
+        else:
+            full_post = title
+
         try:
             if image_url:
                 # Проверяем доступность картинки
                 try:
                     r = requests.head(image_url, timeout=5)
                     if r.status_code == 200:
-                        # Для подписи к фото лимит 1024 символа
-                        caption = format_post(title, full_text, link, max_len=1000)
+                        # Подпись к фото до 1024 символов
+                        caption = smart_truncate(full_post, 1024, link)
                         bot.send_photo(CHANNEL_ID, image_url, caption=caption)
                     else:
-                        # Если картинка недоступна, шлём просто текст
-                        text_only = format_post(title, full_text, link, max_len=4000)
+                        # Картинка недоступна — отправляем текст
+                        text_only = smart_truncate(full_post, 4000, link)
                         bot.send_message(CHANNEL_ID, text_only)
                 except:
-                    text_only = format_post(title, full_text, link, max_len=4000)
+                    text_only = smart_truncate(full_post, 4000, link)
                     bot.send_message(CHANNEL_ID, text_only)
             else:
-                text_only = format_post(title, full_text, link, max_len=4000)
+                # Нет картинки — просто текст
+                text_only = smart_truncate(full_post, 4000, link)
                 bot.send_message(CHANNEL_ID, text_only)
 
             posted_links.add(link)
