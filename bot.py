@@ -211,7 +211,6 @@ def extract_video_url_from_page(soup):
         return None, False
 
     # 1. Прямые видеофайлы (mp4/webm) – приоритет
-    # 1.1. Тег <video> и его <source>
     video_tag = soup.select_one('video')
     if video_tag:
         src = video_tag.get('src')
@@ -221,14 +220,12 @@ def extract_video_url_from_page(soup):
         if source_tag and source_tag.get('src') and re.search(r'\.(mp4|webm)(\?.*)?$', source_tag['src'], re.IGNORECASE):
             return source_tag['src'], False
 
-    # 1.2. og:video с прямым файлом
     og_video = soup.select_one('meta[property="og:video"]')
     if og_video and og_video.get('content'):
         url = og_video['content']
         if re.search(r'\.(mp4|webm)(\?.*)?$', url, re.IGNORECASE):
             return url, False
 
-    # 1.3. Скрипты: поиск sources/vodQualities с mp4/webm
     scripts = soup.find_all('script')
     script_text = ' '.join(s.get_text() for s in scripts)
     pattern = r'(?:sources|vodQualities)[^{]*?["\']src["\']\s*:\s*["\']([^"\']+\.(?:mp4|webm))'
@@ -237,25 +234,21 @@ def extract_video_url_from_page(soup):
         return html.unescape(match.group(1)), False
 
     # 2. YouTube видео
-    # 2.1. Goha.ru: editor-body-youtube
     yt_tag = soup.select_one('editor-body-youtube')
     if yt_tag and yt_tag.get('url'):
         url = yt_tag['url']
         if is_youtube_video(url):
             return url, True
 
-    # 2.2. YouTube iframe (embed)
     iframe = soup.select_one('iframe[src*="youtube.com/embed"], iframe[src*="youtu.be/"]')
     if iframe and iframe.get('src'):
         return iframe['src'], True
 
-    # 2.3. og:video с YouTube
     if og_video and og_video.get('content'):
         url = og_video['content']
         if is_youtube_video(url):
             return url, True
 
-    # 2.4. КГ-Портал: ссылки с классом "youtube"
     for a in soup.select('a.youtube'):
         href = a.get('href', '')
         match = re.search(r'url=([^&]+)', href)
@@ -430,7 +423,6 @@ def build_post_html(title, body, emoji='📄'):
     return "\n".join(parts)
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
-    # Определяем эмодзи
     if video_url and is_youtube:
         emoji = '🎬'
     elif video_url and not is_youtube:
@@ -440,7 +432,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
-    # Сокращаем тело в зависимости от наличия медиа
     if video_url or image_url:
         body = smart_truncate(body, 800) if body else ""
     else:
@@ -448,7 +439,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
 
     message_text = build_post_html(title, body, emoji)
 
-    # Приоритет: прямое видео (mp4/webm) -> YouTube -> картинка -> текст
+    # Прямое видео (mp4/webm)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML')
@@ -456,12 +447,17 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
+    # YouTube: отправляем сообщение с ссылкой (превью покажется)
     if video_url and is_youtube:
-        # Для YouTube отправляем сообщение с ссылкой без кнопки (Telegram покажет превью)
-        # Можно также оставить кнопку, если нужно. Здесь убираем кнопку.
-        bot.send_message(CHANNEL_ID, message_text + f"\n\nСмотреть: {video_url}", parse_mode='HTML', disable_web_page_preview=False)
+        bot.send_message(
+            CHANNEL_ID,
+            message_text + f"\n\nСмотреть: {video_url}",
+            parse_mode='HTML',
+            disable_web_page_preview=False
+        )
         return
 
+    # Картинка
     if image_url:
         image_file = download_image(image_url, referer=link)
         if image_file:
@@ -471,6 +467,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
             except Exception as e:
                 print(f"Не удалось отправить фото: {e}")
 
+    # Обычное сообщение
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True)
 
 def main():
