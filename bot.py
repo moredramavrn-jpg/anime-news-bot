@@ -101,14 +101,17 @@ def extract_image_from_page(soup):
         return og_image['content']
     return None
 
-def fetch_image_url(entry):
-    link = entry.get('link')
-    if link:
-        soup = get_page_soup(link)
-        if soup:
-            image = extract_image_from_page(soup)
-            if image:
-                return image
+def fetch_image_url(entry, soup=None):
+    """Получает URL картинки. Если передан soup, использует его, иначе загружает страницу."""
+    if soup is None:
+        link = entry.get('link')
+        if link:
+            soup = get_page_soup(link)
+    if soup:
+        image = extract_image_from_page(soup)
+        if image:
+            return image
+    # Fallback на RSS
     return extract_image_url_from_entry(entry)
 
 def extract_image_url_from_entry(entry):
@@ -172,12 +175,14 @@ def extract_video_url_from_page(soup):
 
     return None, False
 
-def fetch_video_info(entry):
-    link = entry.get('link')
-    if link:
-        soup = get_page_soup(link)
-        if soup:
-            return extract_video_url_from_page(soup)
+def fetch_video_info(entry, soup=None):
+    """Получает информацию о видео. Если передан soup, использует его."""
+    if soup is None:
+        link = entry.get('link')
+        if link:
+            soup = get_page_soup(link)
+    if soup:
+        return extract_video_url_from_page(soup)
     return None, False
 
 def simple_truncate_by_sentences(text, max_len):
@@ -274,22 +279,30 @@ def format_news_body(text):
 def escape_html(text):
     return html.escape(text, quote=False)
 
+def make_hashtag(text):
+    """Преобразует текст в CamelCase-хэштег без пробелов и спецсимволов."""
+    words = text.strip().split()
+    clean_words = []
+    for w in words:
+        # Оставляем только буквы и цифры
+        clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
+        if clean_w:
+            # Первая буква заглавная, остальные как есть
+            clean_words.append(clean_w[0].upper() + clean_w[1:] if len(clean_w) > 1 else clean_w.upper())
+    if not clean_words:
+        return None
+    return '#' + ''.join(clean_words)
+
 def extract_title_hashtag(title):
-    """Извлекает название аниме из заголовка и делает из него хэштег."""
+    """Извлекает название аниме из заголовка и делает из него хэштег в CamelCase."""
     # Ищем текст в русских кавычках « »
     match = re.search(r'«([^»]+)»', title)
     if not match:
-        # Если нет, ищем в кавычках ""
+        # Ищем в кавычках ""
         match = re.search(r'"([^"]+)"', title)
     if match:
         anime_name = match.group(1).strip()
-        # Убираем пробелы и делаем заглавными первые буквы слов
-        hashtag = re.sub(r'\s+', '', anime_name)
-        if hashtag:
-            # Убираем все символы, кроме букв/цифр
-            hashtag = re.sub(r'[^\w]', '', hashtag, flags=re.UNICODE)
-            if hashtag:
-                return f"#{hashtag}"
+        return make_hashtag(anime_name)
     return None
 
 def build_post_html(title, body):
@@ -302,9 +315,7 @@ def build_post_html(title, body):
         parts.append("──────────")
         parts.append(body_formatted)
 
-    # Базовые хэштеги
     hashtags = ["#аниме", "#новости"]
-    # Добавляем тег из названия (если есть)
     title_tag = extract_title_hashtag(title)
     if title_tag and title_tag not in hashtags:
         hashtags.append(title_tag)
@@ -359,10 +370,15 @@ def main():
 
         title = entry.get('title', 'Без названия')
 
+        # Загружаем страницу один раз (если возможно)
         soup = get_page_soup(link) if link else None
+
+        # Получаем полный текст (используя soup, если он есть)
         full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
-        image_url = fetch_image_url(entry)
-        video_url, is_youtube = fetch_video_info(entry)
+        # Получаем картинку (используя soup, если он есть)
+        image_url = fetch_image_url(entry, soup)
+        # Получаем видео (используя soup, если он есть)
+        video_url, is_youtube = fetch_video_info(entry, soup)
 
         try:
             send_post(title, full_text, link, image_url, video_url, is_youtube)
