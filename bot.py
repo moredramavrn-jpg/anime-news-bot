@@ -14,18 +14,11 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
-# Инициализация Groq клиента
 client = Groq(api_key=GROQ_API_KEY)
-
-# Можно выбрать другую модель из списка, например:
-# "qwen/qwen3.6-27b"
-# "openai/gpt-oss-120b"
-# "groq/compound-mini"
-MODEL_NAME = "openai/gpt-oss-20b"
+MODEL_NAME = "openai/gpt-oss-20b"  # или "qwen/qwen3.6-27b"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# ===== ФУНКЦИИ ДЛЯ ХРАНЕНИЯ ОПУБЛИКОВАННЫХ ССЫЛОК =====
 def load_posted():
     if not os.path.exists(POSTED_FILE):
         return set()
@@ -37,7 +30,6 @@ def save_posted(posted_links):
         for link in posted_links:
             f.write(link + '\n')
 
-# ===== ОЧИСТКА HTML =====
 def clean_html(raw_html):
     if not raw_html:
         return ""
@@ -48,7 +40,6 @@ def clean_html(raw_html):
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n".join(lines)
 
-# ===== ЗАГРУЗКА СТРАНИЦЫ =====
 def get_page_soup(url):
     try:
         headers = {
@@ -64,28 +55,17 @@ def get_page_soup(url):
         print(f"Ошибка загрузки {url}: {e}")
         return None
 
-# ===== ИЗВЛЕЧЕНИЕ ТЕКСТА =====
 def extract_full_text_from_page(soup):
     if not soup:
         return ""
     main_content = soup.select_one('div.editor-body')
     if not main_content:
         selectors = [
-            'article',
-            'div.news-content',
-            'div.content',
-            'div.news-text',
-            'div.post-content',
-            'div.entry-content',
-            'div.article-content',
-            'div.news-detail__text',
-            'div.b-news__text',
-            'div.js-news-text',
-            'div.article__text',
-            'div.text-content',
-            'div.news-item__text',
-            'div.detail__text',
-            'div.news-full__text'
+            'article', 'div.news-content', 'div.content', 'div.news-text',
+            'div.post-content', 'div.entry-content', 'div.article-content',
+            'div.news-detail__text', 'div.b-news__text', 'div.js-news-text',
+            'div.article__text', 'div.text-content', 'div.news-item__text',
+            'div.detail__text', 'div.news-full__text'
         ]
         for selector in selectors:
             main_content = soup.select_one(selector)
@@ -108,7 +88,6 @@ def fetch_full_text(entry):
         return clean_html(summary)
     return ""
 
-# ===== ИЗВЛЕЧЕНИЕ КАРТИНКИ =====
 def extract_image_from_page(soup):
     if not soup:
         return None
@@ -160,21 +139,15 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
-# ===== УМНОЕ СОКРАЩЕНИЕ ТЕКСТА (Groq) =====
 def smart_truncate(text, max_len, link):
-    """
-    Если текст помещается в max_len, возвращает его без изменений.
-    Если нет — просит Groq сократить текст до max_len, сохранив смысл,
-    и добавляет ссылку 'Читать полностью'.
-    """
+    """Сокращает текст с помощью ИИ, если он превышает лимит, иначе возвращает как есть."""
     if len(text) <= max_len:
         return text
 
     link_part = "\n\nЧитать полностью: " + link
     available = max_len - len(link_part)
 
-    if available < 100:
-        # Места слишком мало, ИИ не поможет — просто обрезаем
+    if available < 100:  # слишком мало места – просто обрезаем
         return text[:max_len - len(link_part)] + link_part
 
     prompt = f"""Сократи следующий текст новости до {available} символов, сохранив все ключевые факты и общий смысл. Пиши на русском языке. Не добавляй ничего лишнего.
@@ -190,20 +163,25 @@ def smart_truncate(text, max_len, link):
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
-            max_tokens=available  # ограничиваем количество токенов
+            max_tokens=500  # достаточно токенов, но не слишком много
         )
         shortened = response.choices[0].message.content.strip()
-        if len(shortened) + len(link_part) <= max_len:
-            return shortened + link_part
-        else:
-            # Если ИИ вернул слишком длинно, обрезаем и добавляем ссылку
-            return shortened[:max_len - len(link_part)] + link_part
+
+        # Если ответ пустой или подозрительно короткий, используем fallback
+        if len(shortened) < 50:
+            print("Модель вернула слишком короткий ответ, применяем fallback-обрезание")
+            return text[:max_len - len(link_part)] + link_part
+
+        # Гарантируем, что результат вместе со ссылкой не превысит лимит
+        if len(shortened) + len(link_part) > max_len:
+            shortened = shortened[:max_len - len(link_part)]
+
+        return shortened + link_part
+
     except Exception as e:
         print(f"Ошибка при сокращении через Groq: {e}")
-        # Fallback: обычное обрезание
         return text[:max_len - len(link_part)] + link_part
 
-# ===== ОСНОВНАЯ ЛОГИКА =====
 def main():
     posted_links = load_posted()
     new_posts = 0
@@ -224,7 +202,6 @@ def main():
         full_text = fetch_full_text(entry)
         image_url = fetch_image_url(entry)
 
-        # Собираем полный пост (заголовок + текст)
         if full_text:
             full_post = title + "\n\n" + full_text
         else:
@@ -232,22 +209,18 @@ def main():
 
         try:
             if image_url:
-                # Проверяем доступность картинки
                 try:
                     r = requests.head(image_url, timeout=5)
                     if r.status_code == 200:
-                        # Подпись к фото до 1024 символов
                         caption = smart_truncate(full_post, 1024, link)
                         bot.send_photo(CHANNEL_ID, image_url, caption=caption)
                     else:
-                        # Картинка недоступна — отправляем текст
                         text_only = smart_truncate(full_post, 4000, link)
                         bot.send_message(CHANNEL_ID, text_only)
                 except:
                     text_only = smart_truncate(full_post, 4000, link)
                     bot.send_message(CHANNEL_ID, text_only)
             else:
-                # Нет картинки — просто текст
                 text_only = smart_truncate(full_post, 4000, link)
                 bot.send_message(CHANNEL_ID, text_only)
 
