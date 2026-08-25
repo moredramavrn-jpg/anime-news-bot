@@ -35,34 +35,64 @@ def clean_html(raw_html):
     return "\n".join(lines)
 
 def extract_image_url(entry):
+    """Пытается извлечь картинку сначала из RSS, затем со страницы."""
+    # 1. media:content
     if 'media_content' in entry:
         for media in entry.media_content:
             if 'url' in media:
                 return media['url']
+    # 2. media:thumbnail
     if 'media_thumbnail' in entry:
         for media in entry.media_thumbnail:
             if 'url' in media:
                 return media['url']
+    # 3. enclosure (если тип изображение)
     if 'enclosures' in entry and entry.enclosures:
         for enc in entry.enclosures:
             if 'href' in enc and enc.get('type', '').startswith('image'):
                 return enc['href']
             if 'url' in enc and enc.get('type', '').startswith('image'):
                 return enc['url']
+    # 4. Поиск <img> в summary или description
     summary = entry.get('summary', '') or entry.get('description', '')
     if summary:
         match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', summary, re.IGNORECASE)
         if match:
             return match.group(1)
+    # 5. Поиск в content (если есть)
     content = entry.get('content', [])
     for c in content:
         if 'value' in c:
             match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', c['value'], re.IGNORECASE)
             if match:
                 return match.group(1)
+
+    # Если в RSS нет, пробуем получить со страницы
+    link = entry.get('link')
+    if link:
+        return extract_image_from_page(link)
+    return None
+
+def extract_image_from_page(link):
+    """Загружает страницу новости и ищет изображение в div.editor-body-image."""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        r = requests.get(link, headers=headers, timeout=10)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'lxml')
+        # Ищем изображение в блоке с классом editor-body-image или первом img внутри editor-body
+        img_tag = soup.select_one('div.editor-body-image img')
+        if not img_tag:
+            img_tag = soup.select_one('div.editor-body img')
+        if img_tag and img_tag.get('src'):
+            return img_tag['src']
+    except Exception as e:
+        print(f"Ошибка загрузки изображения со страницы {link}: {e}")
     return None
 
 def fetch_full_text(entry):
+    """Получает полный текст новости. Сначала из RSS, затем со страницы."""
+    # 1. Пытаемся взять content:encoded из RSS
     if 'content' in entry:
         content = entry.content[0].get('value', '')
         if content:
@@ -78,32 +108,34 @@ def fetch_full_text(entry):
         r.raise_for_status()
         soup = BeautifulSoup(r.text, 'lxml')
 
-        selectors = [
-            'article',
-            'div.news-content',
-            'div.content',
-            'div.news-text',
-            'div.text',
-            'div.post-content',
-            'div.entry-content',
-            'div.article-content',
-            'div.news-detail__text',
-            'div.b-news__text',
-            'div.js-news-text',
-            'div.article__text',
-            'div.story__text',
-            'div.text-content',
-            'div.news-item__text',
-            'div.detail__text',
-            'div.news-full__text'
-        ]
-        main_content = None
-        for selector in selectors:
-            candidate = soup.select_one(selector)
-            if candidate:
-                main_content = candidate
-                break
+        # Главный селектор под Goha.ru
+        main_content = soup.select_one('div.editor-body')
 
+        # Если не найден, пробуем другие распространённые
+        if not main_content:
+            selectors = [
+                'article',
+                'div.news-content',
+                'div.content',
+                'div.news-text',
+                'div.post-content',
+                'div.entry-content',
+                'div.article-content',
+                'div.news-detail__text',
+                'div.b-news__text',
+                'div.js-news-text',
+                'div.article__text',
+                'div.text-content',
+                'div.news-item__text',
+                'div.detail__text',
+                'div.news-full__text'
+            ]
+            for selector in selectors:
+                main_content = soup.select_one(selector)
+                if main_content:
+                    break
+
+        # Если всё ещё не найден, попробуем найти самый длинный блок с текстом
         if not main_content:
             paragraphs = soup.find_all('p')
             if paragraphs:
@@ -130,9 +162,12 @@ def fetch_full_text(entry):
         return clean_html(entry.get('summary', '') or entry.get('description', ''))
 
 def format_post(title, full_text, link):
+    """Формирует пост с обрезкой по лимиту Telegram и ссылкой на источник."""
     text = title.strip()
     if full_text:
-        max_len = 3800
+        # Лимит Telegram для подписи к фото — 1024 символа, для обычного сообщения — 4096.
+        # Чтобы было надёжно, обрежем до ~3500 символов.
+        max_len = 3500
         if len(full_text) > max_len:
             full_text = full_text[:max_len] + "...\n\nЧитать полностью: " + link
         else:
@@ -165,10 +200,17 @@ def main():
 
         try:
             if image_url:
+                # Проверяем доступность картинки
                 try:
                     r = requests.head(image_url, timeout=5)
                     if r.status_code == 200:
-                        bot.send_photo(CHANNEL_ID, image_url, caption=post_text)
+                        # Telegram ограничивает подпись к фото 1024 символами.
+                        # Если текст слишком длинный, лучше отправить фото и текст отдельно.
+                        if len(post_text) <= 1024:
+                            bot.send_photo(CHANNEL_ID, image_url, caption=post_text)
+                        else:
+                            bot.send_photo(CHANNEL_ID, image_url)
+                            bot.send_message(CHANNEL_ID, post_text)
                     else:
                         bot.send_message(CHANNEL_ID, post_text)
                 except:
