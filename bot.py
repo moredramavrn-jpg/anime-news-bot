@@ -15,7 +15,7 @@ RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
 client = Groq(api_key=GROQ_API_KEY)
-MODEL_NAME = "openai/gpt-oss-20b"  # или "qwen/qwen3.6-27b"
+MODEL_NAME = "qwen/qwen3.6-27b"  # более стабильная модель для русского языка
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -139,18 +139,12 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
-def smart_truncate(text, max_len, link):
-    """Сокращает текст с помощью ИИ, если он превышает лимит, иначе возвращает как есть."""
+def smart_truncate(text, max_len):
+    """Сокращает текст, сохраняя смысл. Без ссылок."""
     if len(text) <= max_len:
         return text
 
-    link_part = "\n\nЧитать полностью: " + link
-    available = max_len - len(link_part)
-
-    if available < 100:  # слишком мало места – просто обрезаем
-        return text[:max_len - len(link_part)] + link_part
-
-    prompt = f"""Сократи следующий текст новости до {available} символов, сохранив все ключевые факты и общий смысл. Пиши на русском языке. Не добавляй ничего лишнего.
+    prompt = f"""Сократи следующий текст новости до {max_len} символов, сохранив все ключевые факты и общий смысл. Пиши на русском языке. Ничего не добавляй от себя.
 
 Текст:
 {text}
@@ -163,24 +157,20 @@ def smart_truncate(text, max_len, link):
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
-            max_tokens=500  # достаточно токенов, но не слишком много
+            max_tokens=500
         )
         shortened = response.choices[0].message.content.strip()
-
-        # Если ответ пустой или подозрительно короткий, используем fallback
+        # Проверяем, что ответ не пустой и не слишком короткий
         if len(shortened) < 50:
-            print("Модель вернула слишком короткий ответ, применяем fallback-обрезание")
-            return text[:max_len - len(link_part)] + link_part
-
-        # Гарантируем, что результат вместе со ссылкой не превысит лимит
-        if len(shortened) + len(link_part) > max_len:
-            shortened = shortened[:max_len - len(link_part)]
-
-        return shortened + link_part
-
+            print("Модель вернула слишком короткий текст, обрезаем обычным способом")
+            return text[:max_len]
+        # Если ответ всё равно длиннее лимита, обрезаем
+        if len(shortened) > max_len:
+            shortened = shortened[:max_len]
+        return shortened
     except Exception as e:
         print(f"Ошибка при сокращении через Groq: {e}")
-        return text[:max_len - len(link_part)] + link_part
+        return text[:max_len]
 
 def main():
     posted_links = load_posted()
@@ -212,16 +202,18 @@ def main():
                 try:
                     r = requests.head(image_url, timeout=5)
                     if r.status_code == 200:
-                        caption = smart_truncate(full_post, 1024, link)
+                        # Подпись к фото до 1024 символов
+                        caption = smart_truncate(full_post, 1024)
                         bot.send_photo(CHANNEL_ID, image_url, caption=caption)
                     else:
-                        text_only = smart_truncate(full_post, 4000, link)
+                        # Картинка недоступна, отправляем текст
+                        text_only = smart_truncate(full_post, 4000)
                         bot.send_message(CHANNEL_ID, text_only)
                 except:
-                    text_only = smart_truncate(full_post, 4000, link)
+                    text_only = smart_truncate(full_post, 4000)
                     bot.send_message(CHANNEL_ID, text_only)
             else:
-                text_only = smart_truncate(full_post, 4000, link)
+                text_only = smart_truncate(full_post, 4000)
                 bot.send_message(CHANNEL_ID, text_only)
 
             posted_links.add(link)
