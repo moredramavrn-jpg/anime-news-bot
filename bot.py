@@ -1,14 +1,12 @@
 import os
 import re
 import feedparser
-from groq import Groq
 import telebot
 import requests
 
 # ===== НАСТРОЙКИ (из секретов GitHub) =====
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # ===== ИСТОЧНИК: только Goha.ru =====
 RSS_URL = "https://www.goha.ru/rss/anime"
@@ -16,7 +14,6 @@ RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-client = Groq(api_key=GROQ_API_KEY)
 
 # ===== РАБОТА С ФАЙЛОМ ОПУБЛИКОВАННЫХ ССЫЛОК =====
 def load_posted():
@@ -29,53 +26,6 @@ def save_posted(posted_links):
     with open(POSTED_FILE, 'w', encoding='utf-8') as f:
         for link in posted_links:
             f.write(link + '\n')
-
-# ===== ОЧИСТКА ОТ <think> =====
-def clean_thinking(text):
-    if '<think>' in text:
-        end_idx = text.find('</think>')
-        if end_idx != -1:
-            return text[end_idx + len('</think>'):].strip()
-        else:
-            start_idx = text.find('<think>')
-            if start_idx != -1:
-                return text[start_idx + len('<think>'):].strip()
-    return text.strip()
-
-# ===== ГЕНЕРАЦИЯ ПОСТА =====
-def generate_post(title, summary):
-    prompt = f"""Ты — редактор популярного аниме-канала в Telegram. Тебе дали новость (на русском или английском).
-Твоя задача — сделать из неё уникальный пост, который не выглядит как копипаст.
-
-Правила:
-1. Перескажи своими словами, сохраняя ключевые факты.
-2. Пиши на русском языке, от первого лица (как будто ты сам сообщаешь новость подписчикам).
-3. Добавь 2-3 эмодзи и хэштеги #аниме #новости.
-4. Длина поста: 3-5 предложений.
-5. Выведи ТОЛЬКО готовый пост, без пояснений.
-
-Исходная новость:
-Заголовок: {title}
-Описание: {summary}
-
-Пост:"""
-
-    try:
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-20b",   # если модель недоступна, замените на "qwen/qwen3.6-27b"
-            messages=[
-                {"role": "system", "content": "Ты — талантливый копирайтер аниме-канала."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.9,
-            max_tokens=400
-        )
-        raw = response.choices[0].message.content.strip()
-        cleaned = clean_thinking(raw)
-        return cleaned if cleaned else f"{title}\n\n{summary[:200]}...\n\n#аниме #новости"
-    except Exception as e:
-        print(f"Ошибка генерации: {e}")
-        return f"{title}\n\n{summary[:200]}...\n\n#аниме #новости"
 
 # ===== ИЗВЛЕЧЕНИЕ КАРТИНКИ ИЗ RSS =====
 def extract_image_url(entry):
@@ -111,6 +61,22 @@ def extract_image_url(entry):
                 return match.group(1)
     return None
 
+# ===== ФОРМИРОВАНИЕ ТЕКСТА ПОСТА (без ИИ) =====
+def format_post(title, summary, link):
+    """
+    Собирает сообщение из заголовка и описания.
+    Можно добавить ссылку на источник (раскомментируйте строку).
+    """
+    text = title.strip()
+    if summary:
+        # Убираем HTML-теги, оставляем чистый текст
+        clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
+        if clean_summary:
+            text += f"\n\n{clean_summary}"
+    # Если хотите добавить ссылку на новость, раскомментируйте следующую строку:
+    # text += f"\n\nИсточник: {link}"
+    return text
+
 # ===== ОСНОВНАЯ ЛОГИКА =====
 def main():
     posted_links = load_posted()
@@ -130,11 +96,9 @@ def main():
 
         title = entry.get('title', 'Без названия')
         summary = entry.get('summary', '') or entry.get('description', '') or ''
-        # Убираем HTML-теги из описания
-        clean_summary = re.sub(r'<[^>]+>', '', summary).strip()
 
-        # Генерируем уникальный пост
-        post_text = generate_post(title, clean_summary)
+        # Формируем текст поста (без изменений)
+        post_text = format_post(title, summary, link)
 
         # Пытаемся получить картинку
         image_url = extract_image_url(entry)
