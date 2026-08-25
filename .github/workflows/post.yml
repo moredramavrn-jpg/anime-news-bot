@@ -1,0 +1,41 @@
+name: Anime News Bot
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # каждые 30 минут
+  workflow_dispatch:         # ручной запуск
+
+permissions:
+  contents: write            # разрешаем запись в репозиторий
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install feedparser groq python-telegram-bot
+
+      - name: Run bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python bot.py
+
+      - name: Commit posted.txt if changed
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add posted.txt
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update posted.txt"
+            git push
+          fi
