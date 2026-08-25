@@ -6,7 +6,7 @@ import feedparser
 import telebot
 import requests
 import yt_dlp
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, unquote
 from bs4 import BeautifulSoup
 from telebot import types
 
@@ -208,12 +208,25 @@ def is_youtube_video(url):
     return ('youtube.com/watch' in url) or ('youtu.be/' in url)
 
 def to_short_youtube_url(url):
-    """Преобразует полную ссылку YouTube в короткую youtu.be, если возможно."""
-    if 'youtube.com/watch' in url:
-        video_id = re.search(r'v=([^&]+)', url)
-        if video_id:
-            return f"https://youtu.be/{video_id.group(1)}"
-    return url
+    """
+    Преобразует любую YouTube-ссылку в короткую youtu.be/ID,
+    включая ссылки с закодированными символами (%3F, %3D).
+    """
+    # Декодируем URL, чтобы убрать %3F, %3D и т.п.
+    decoded_url = unquote(url)
+    # Извлекаем ID видео
+    video_id = None
+    if 'youtube.com/watch' in decoded_url:
+        match = re.search(r'v=([^&]+)', decoded_url)
+        if match:
+            video_id = match.group(1)
+    elif 'youtu.be/' in decoded_url:
+        match = re.search(r'youtu\.be/([^?&]+)', decoded_url)
+        if match:
+            video_id = match.group(1)
+    if video_id:
+        return f"https://youtu.be/{video_id}"
+    return decoded_url  # если не получилось, возвращаем декодированную ссылку
 
 def extract_video_url_from_page(soup):
     if not soup:
@@ -500,7 +513,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
             except Exception as e:
                 print(f"Не удалось отправить скачанное видео: {e}")
 
-        # Если скачать не удалось, отправляем короткую ссылку с превью
+        # Если не удалось скачать, отправляем короткую ссылку с превью
         short_url = to_short_youtube_url(video_url)
         bot.send_message(
             CHANNEL_ID,
