@@ -4,7 +4,6 @@ import html
 import feedparser
 import telebot
 import requests
-import pymorphy3
 from bs4 import BeautifulSoup
 from telebot import types
 
@@ -13,13 +12,17 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 HF_API_KEY = os.getenv("HF_API_KEY")
 
-RSS_URL = "https://www.goha.ru/rss/anime"
+# Несколько источников RSS
+RSS_URLS = [
+    "https://www.goha.ru/rss/anime",
+    "https://kg-portal.ru/rss/news_anime.rss"
+]
+
 POSTED_FILE = "posted.txt"
 
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-morph = pymorphy3.MorphAnalyzer()
 
 def load_posted():
     if not os.path.exists(POSTED_FILE):
@@ -60,7 +63,14 @@ def get_page_soup(url):
 def extract_full_text_from_page(soup):
     if not soup:
         return ""
+
+    # Goha.ru: div.editor-body
     main_content = soup.select_one('div.editor-body')
+    # КГ-Портал: div.news_text
+    if not main_content:
+        main_content = soup.select_one('div.news_text')
+
+    # Запасные селекторы
     if not main_content:
         selectors = [
             'article', 'div.news-content', 'div.content', 'div.news-text',
@@ -73,6 +83,7 @@ def extract_full_text_from_page(soup):
             main_content = soup.select_one(selector)
             if main_content:
                 break
+
     if main_content:
         return clean_html(str(main_content))
     return ""
@@ -93,15 +104,25 @@ def fetch_full_text(entry):
 def extract_image_from_page(soup):
     if not soup:
         return None
+
+    # Goha.ru
     img_tag = soup.select_one('div.editor-body-image img')
     if img_tag and img_tag.get('src'):
         return img_tag['src']
     img_tag = soup.select_one('div.editor-body img')
     if img_tag and img_tag.get('src'):
         return img_tag['src']
+
+    # КГ-Портал
+    img_tag = soup.select_one('div.news_cover_center img')
+    if img_tag and img_tag.get('src'):
+        return img_tag['src']
+
+    # og:image
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
         return og_image['content']
+
     return None
 
 def fetch_image_url(entry, soup=None):
@@ -113,6 +134,7 @@ def fetch_image_url(entry, soup=None):
         image = extract_image_from_page(soup)
         if image:
             return image
+    # Fallback на RSS
     image = extract_image_url_from_entry(entry)
     if image:
         return image
@@ -151,6 +173,7 @@ def extract_video_url_from_page(soup):
     if not soup:
         return None, False
 
+    # Goha.ru
     yt_tag = soup.select_one('editor-body-youtube')
     if yt_tag and yt_tag.get('url'):
         return yt_tag['url'], True
@@ -174,6 +197,7 @@ def extract_video_url_from_page(soup):
         is_yt = 'youtube.com' in url or 'youtu.be' in url
         return url, is_yt
 
+    # Ссылка на YouTube (КГ-Портал иногда использует такой формат)
     yt_link = soup.select_one('a[href*="youtube.com"], a[href*="youtu.be"]')
     if yt_link and yt_link.get('href'):
         return yt_link['href'], True
@@ -287,12 +311,7 @@ def make_hashtag(text):
     for w in words:
         clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
         if clean_w:
-            try:
-                parsed = morph.parse(clean_w)[0]
-                normal = parsed.normal_form
-            except Exception:
-                normal = clean_w
-            clean_words.append(normal.lower())
+            clean_words.append(clean_w.lower())
     if not clean_words:
         return None
     return '#' + '_'.join(clean_words)
@@ -327,6 +346,7 @@ def build_post_html(title, body, emoji='📄'):
     return "\n".join(parts)
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
+    # Определяем эмодзи для заголовка
     if video_url and is_youtube:
         emoji = '🎬'
     elif video_url and not is_youtube:
@@ -336,6 +356,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
+    # Готовим тело: если есть фото, сокращаем до 800, иначе до 3000
     if image_url:
         body = smart_truncate(body, 800) if body else ""
     else:
@@ -348,6 +369,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
+    # Отправка прямого видео (mp4/webm)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -355,6 +377,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
+    # Отправка фото
     if image_url:
         try:
             bot.send_photo(CHANNEL_ID, image_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -362,38 +385,40 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить фото: {e}")
 
+    # Обычное сообщение
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 def main():
     posted_links = load_posted()
     new_posts = 0
 
-    print(f"Обрабатываю ленту: {RSS_URL}")
-    try:
-        feed = feedparser.parse(RSS_URL)
-    except Exception as e:
-        print(f"Не удалось получить ленту {RSS_URL}: {e}")
-        return
-
-    for entry in feed.entries[:10]:
-        link = entry.get('link', '')
-        if not link or link in posted_links:
+    for rss_url in RSS_URLS:
+        print(f"Обрабатываю ленту: {rss_url}")
+        try:
+            feed = feedparser.parse(rss_url)
+        except Exception as e:
+            print(f"Не удалось получить ленту {rss_url}: {e}")
             continue
 
-        title = entry.get('title', 'Без названия')
+        for entry in feed.entries[:10]:
+            link = entry.get('link', '')
+            if not link or link in posted_links:
+                continue
 
-        soup = get_page_soup(link) if link else None
-        full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
-        image_url = fetch_image_url(entry, soup)
-        video_url, is_youtube = fetch_video_info(entry, soup)
+            title = entry.get('title', 'Без названия')
 
-        try:
-            send_post(title, full_text, link, image_url, video_url, is_youtube)
-            posted_links.add(link)
-            new_posts += 1
-            print(f"Опубликовано: {title}")
-        except Exception as e:
-            print(f"Ошибка отправки для {link}: {e}")
+            soup = get_page_soup(link) if link else None
+            full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
+            image_url = fetch_image_url(entry, soup)
+            video_url, is_youtube = fetch_video_info(entry, soup)
+
+            try:
+                send_post(title, full_text, link, image_url, video_url, is_youtube)
+                posted_links.add(link)
+                new_posts += 1
+                print(f"Опубликовано: {title}")
+            except Exception as e:
+                print(f"Ошибка отправки для {link}: {e}")
 
     if new_posts > 0:
         save_posted(posted_links)
