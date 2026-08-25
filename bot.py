@@ -1,5 +1,6 @@
 import os
 import re
+import html
 import feedparser
 import telebot
 import requests
@@ -138,21 +139,17 @@ def extract_image_url_from_entry(entry):
     return None
 
 def extract_video_url_from_page(soup):
-    """Ищет видео на странице. Возвращает (url, is_youtube)."""
     if not soup:
         return None, False
 
-    # 1. Кастомный тег <editor-body-youtube url="...">
     yt_tag = soup.select_one('editor-body-youtube')
     if yt_tag and yt_tag.get('url'):
         return yt_tag['url'], True
 
-    # 2. YouTube iframe
     iframe = soup.select_one('iframe[src*="youtube.com"], iframe[src*="youtu.be"]')
     if iframe and iframe.get('src'):
         return iframe['src'], True
 
-    # 3. Прямые видео теги
     video_tag = soup.select_one('video')
     if video_tag:
         src = video_tag.get('src')
@@ -162,14 +159,12 @@ def extract_video_url_from_page(soup):
         if source_tag and source_tag.get('src'):
             return source_tag['src'], False
 
-    # 4. meta og:video
     og_video = soup.select_one('meta[property="og:video"]')
     if og_video and og_video.get('content'):
         url = og_video['content']
         is_yt = 'youtube.com' in url or 'youtu.be' in url
         return url, is_yt
 
-    # 5. Ссылка на YouTube внутри текста (если есть)
     yt_link = soup.select_one('a[href*="youtube.com"], a[href*="youtu.be"]')
     if yt_link and yt_link.get('href'):
         return yt_link['href'], True
@@ -177,7 +172,6 @@ def extract_video_url_from_page(soup):
     return None, False
 
 def fetch_video_info(entry):
-    """Возвращает (video_url, is_youtube) для новости."""
     link = entry.get('link')
     if link:
         soup = get_page_soup(link)
@@ -242,6 +236,58 @@ def smart_truncate(text, max_len):
         print("Hugging Face не справился, используем обрезание по предложениям")
         return simple_truncate_by_sentences(text, max_len)
 
+def escape_html(text):
+    """Экранирует специальные символы для безопасного HTML."""
+    return html.escape(text, quote=False)
+
+def build_post_html(title, body, video_url=None, is_youtube=False):
+    """Собирает красиво отформатированный HTML-текст поста."""
+    title_esc = escape_html(title)
+    body_esc = escape_html(body) if body else ""
+
+    parts = [f"<b>{title_esc}</b>"]
+
+    if body_esc:
+        parts.append("──────────")
+        parts.append(body_esc)
+
+    if video_url and is_youtube:
+        parts.append("")
+        parts.append(f'🎬 <a href="{video_url}">Смотреть видео</a>')
+
+    return "\n".join(parts)
+
+def send_post(title, body, image_url, video_url, is_youtube):
+    """Отправляет пост в канал с учётом всех элементов."""
+    # Для подписи к фото/видео лимит 1024 символа, для обычного сообщения 4096.
+    if image_url:
+        # Пытаемся отправить фото с подписью
+        body_for_caption = smart_truncate(body, 900) if body else ""
+        caption = build_post_html(title, body_for_caption, video_url, is_youtube)
+        try:
+            # Проверяем доступность фото
+            r = requests.head(image_url, timeout=5)
+            if r.status_code == 200:
+                bot.send_photo(CHANNEL_ID, image_url, caption=caption, parse_mode='HTML')
+                return
+        except Exception as e:
+            print(f"Не удалось отправить фото: {e}")
+
+    if video_url and not is_youtube:
+        # Прямое видео
+        body_for_caption = smart_truncate(body, 900) if body else ""
+        caption = build_post_html(title, body_for_caption)
+        try:
+            bot.send_video(CHANNEL_ID, video_url, caption=caption, parse_mode='HTML')
+            return
+        except Exception as e:
+            print(f"Не удалось отправить видео: {e}")
+
+    # Если фото/видео не отправлены, отправляем обычное сообщение
+    body_for_message = smart_truncate(body, 3500) if body else ""
+    message = build_post_html(title, body_for_message, video_url, is_youtube)
+    bot.send_message(CHANNEL_ID, message, parse_mode='HTML')
+
 def main():
     posted_links = load_posted()
     new_posts = 0
@@ -263,44 +309,8 @@ def main():
         image_url = fetch_image_url(entry)
         video_url, is_youtube = fetch_video_info(entry)
 
-        if full_text:
-            full_post = title + "\n\n" + full_text
-        else:
-            full_post = title
-
         try:
-            if video_url:
-                # Если есть видео, отправляем текст с ссылкой (или видео, если прямой файл)
-                if is_youtube:
-                    post_with_video = full_post + "\n\nСмотреть видео: " + video_url
-                    text_to_send = smart_truncate(post_with_video, 4000)
-                    bot.send_message(CHANNEL_ID, text_to_send)
-                else:
-                    # Прямой mp4/webm
-                    try:
-                        caption = smart_truncate(full_post, 1024)
-                        bot.send_video(CHANNEL_ID, video_url, caption=caption)
-                    except Exception as e:
-                        print(f"Не удалось отправить видео: {e}")
-                        text_to_send = smart_truncate(full_post, 4000)
-                        bot.send_message(CHANNEL_ID, text_to_send)
-            else:
-                # Если видео нет, работаем с картинкой
-                if image_url:
-                    try:
-                        r = requests.head(image_url, timeout=5)
-                        if r.status_code == 200:
-                            caption = smart_truncate(full_post, 1024)
-                            bot.send_photo(CHANNEL_ID, image_url, caption=caption)
-                        else:
-                            text_only = smart_truncate(full_post, 4000)
-                            bot.send_message(CHANNEL_ID, text_only)
-                    except:
-                        text_only = smart_truncate(full_post, 4000)
-                        bot.send_message(CHANNEL_ID, text_only)
-                else:
-                    text_only = smart_truncate(full_post, 4000)
-                    bot.send_message(CHANNEL_ID, text_only)
+            send_post(title, full_text, image_url, video_url, is_youtube)
 
             posted_links.add(link)
             new_posts += 1
