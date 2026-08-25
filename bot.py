@@ -25,7 +25,7 @@ POSTED_FILE = "posted.txt"
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-morph = pymorphy3.MorphAnalyzer()
+morph = pymorphy3.MorphAnalyzer()   # для нормализации слов
 
 def load_posted():
     if not os.path.exists(POSTED_FILE):
