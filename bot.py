@@ -13,7 +13,6 @@ HF_API_KEY = os.getenv("HF_API_KEY")
 RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
-# Модель Hugging Face (можно заменить на другую, например, "mistralai/Mistral-7B-Instruct-v0.3")
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
@@ -138,8 +137,45 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
+def extract_video_url_from_page(soup):
+    """Ищет видео на странице. Возвращает (url, is_youtube)."""
+    if not soup:
+        return None, False
+
+    # 1. Прямые видео теги
+    video_tag = soup.select_one('video')
+    if video_tag:
+        src = video_tag.get('src')
+        if src:
+            return src, False
+        source_tag = video_tag.select_one('source')
+        if source_tag and source_tag.get('src'):
+            return source_tag['src'], False
+
+    # 2. meta og:video
+    og_video = soup.select_one('meta[property="og:video"]')
+    if og_video and og_video.get('content'):
+        url = og_video['content']
+        is_yt = 'youtube.com' in url or 'youtu.be' in url
+        return url, is_yt
+
+    # 3. YouTube iframe
+    iframe = soup.select_one('iframe[src*="youtube.com"], iframe[src*="youtu.be"]')
+    if iframe and iframe.get('src'):
+        return iframe['src'], True
+
+    return None, False
+
+def fetch_video_info(entry):
+    """Возвращает (video_url, is_youtube) для новости."""
+    link = entry.get('link')
+    if link:
+        soup = get_page_soup(link)
+        if soup:
+            return extract_video_url_from_page(soup)
+    return None, False
+
 def simple_truncate_by_sentences(text, max_len):
-    """Обрезает текст до max_len символов, стараясь завершить на границе предложения."""
     if len(text) <= max_len:
         return text
     sentences = re.split(r'(?<=[.!?])\s+', text)
@@ -153,7 +189,6 @@ def simple_truncate_by_sentences(text, max_len):
     return result
 
 def call_hf_api(prompt):
-    """Отправляет запрос к Hugging Face Inference API и возвращает ответ."""
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}",
         "Content-Type": "application/json"
@@ -170,7 +205,6 @@ def call_hf_api(prompt):
         response = requests.post(HF_MODEL_URL, headers=headers, json=payload, timeout=20)
         response.raise_for_status()
         result = response.json()
-        # Обработка разных форматов ответа
         if isinstance(result, list) and len(result) > 0:
             return result[0].get('generated_text', '').strip()
         elif isinstance(result, dict):
@@ -182,19 +216,15 @@ def call_hf_api(prompt):
         return None
 
 def smart_truncate(text, max_len):
-    """Сокращает и переводит текст через Hugging Face, если он длиннее max_len."""
     if len(text) <= max_len:
         return text
-
     prompt = f"""Напиши краткий пересказ следующей новости на русском языке. Объём пересказа должен быть не более {max_len} символов. Сохрани все важные факты, имена, названия. Не добавляй ничего от себя.
 
 Новость:
 {text}
 """
     shortened = call_hf_api(prompt)
-
     if shortened and len(shortened) >= 50:
-        # Если модель вернула текст с остатками промпта, попробуем обрезать до нужной длины
         if len(shortened) > max_len:
             shortened = simple_truncate_by_sentences(shortened, max_len)
         return shortened
@@ -221,28 +251,51 @@ def main():
         title = entry.get('title', 'Без названия')
         full_text = fetch_full_text(entry)
         image_url = fetch_image_url(entry)
+        video_url, is_youtube = fetch_video_info(entry)
 
+        # Формируем базовый пост
         if full_text:
             full_post = title + "\n\n" + full_text
         else:
             full_post = title
 
         try:
-            if image_url:
-                try:
-                    r = requests.head(image_url, timeout=5)
-                    if r.status_code == 200:
-                        caption = smart_truncate(full_post, 1024)
-                        bot.send_photo(CHANNEL_ID, image_url, caption=caption)
-                    else:
+            # Если есть видео (YouTube или прямой)
+            if video_url:
+                # Добавляем ссылку на видео в текст
+                if is_youtube:
+                    post_with_video = full_post + "\n\nСмотреть видео: " + video_url
+                else:
+                    post_with_video = full_post  # для прямого видео ссылку не добавляем
+
+                # Отправляем текст, сокращённый до 4000 символов
+                text_to_send = smart_truncate(post_with_video, 4000)
+                # Если есть прямой mp4, пробуем отправить видео
+                if not is_youtube:
+                    try:
+                        bot.send_video(CHANNEL_ID, video_url, caption=smart_truncate(full_post, 1024))
+                    except Exception as e:
+                        print(f"Не удалось отправить видео: {e}")
+                        bot.send_message(CHANNEL_ID, text_to_send)
+                else:
+                    bot.send_message(CHANNEL_ID, text_to_send)
+            else:
+                # Если видео нет, работаем с картинкой
+                if image_url:
+                    try:
+                        r = requests.head(image_url, timeout=5)
+                        if r.status_code == 200:
+                            caption = smart_truncate(full_post, 1024)
+                            bot.send_photo(CHANNEL_ID, image_url, caption=caption)
+                        else:
+                            text_only = smart_truncate(full_post, 4000)
+                            bot.send_message(CHANNEL_ID, text_only)
+                    except:
                         text_only = smart_truncate(full_post, 4000)
                         bot.send_message(CHANNEL_ID, text_only)
-                except:
+                else:
                     text_only = smart_truncate(full_post, 4000)
                     bot.send_message(CHANNEL_ID, text_only)
-            else:
-                text_only = smart_truncate(full_post, 4000)
-                bot.send_message(CHANNEL_ID, text_only)
 
             posted_links.add(link)
             new_posts += 1
