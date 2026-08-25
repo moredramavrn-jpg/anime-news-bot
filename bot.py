@@ -4,6 +4,7 @@ import html
 import feedparser
 import telebot
 import requests
+import pymorphy2
 from bs4 import BeautifulSoup
 from telebot import types
 
@@ -18,6 +19,7 @@ POSTED_FILE = "posted.txt"
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
+morph = pymorphy2.MorphAnalyzer()   # для нормализации слов
 
 def load_posted():
     if not os.path.exists(POSTED_FILE):
@@ -278,19 +280,30 @@ def format_news_body(text):
 
     paragraphs = [bold_quotes(p) for p in paragraphs]
 
-    # Курсив не добавляем вообще
+    # Курсив не добавляем
     return "\n\n".join(paragraphs)
 
 def escape_html(text):
     return html.escape(text, quote=False)
 
 def make_hashtag(text):
+    """
+    Преобразует название аниме в хэштег.
+    Слова приводятся к нормальной форме (именительный падеж, ед. число) через pymorphy2,
+    затем склеиваются символом '_' и переводятся в нижний регистр.
+    """
     words = text.strip().split()
     clean_words = []
     for w in words:
         clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
         if clean_w:
-            clean_words.append(clean_w.lower())
+            try:
+                # Берём наиболее вероятную нормальную форму
+                parsed = morph.parse(clean_w)[0]
+                normal = parsed.normal_form
+            except Exception:
+                normal = clean_w
+            clean_words.append(normal.lower())
     if not clean_words:
         return None
     return '#' + '_'.join(clean_words)
@@ -325,7 +338,6 @@ def build_post_html(title, body, emoji='📄'):
     return "\n".join(parts)
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
-    # Определяем эмодзи для заголовка
     if video_url and is_youtube:
         emoji = '🎬'
     elif video_url and not is_youtube:
@@ -335,7 +347,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
-    # Готовим тело: если есть фото, сокращаем до 800, иначе до 3000
     if image_url:
         body = smart_truncate(body, 800) if body else ""
     else:
@@ -348,7 +359,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
-    # Отправка прямого видео (mp4/webm)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -356,7 +366,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # Отправка фото
     if image_url:
         try:
             bot.send_photo(CHANNEL_ID, image_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -364,7 +373,6 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить фото: {e}")
 
-    # Если фото/видео не отправились, отправляем обычное сообщение
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 def main():
