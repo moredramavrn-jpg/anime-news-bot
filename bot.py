@@ -8,6 +8,7 @@ import requests
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from telebot import types
+import yt_dlp
 
 # ===== НАСТРОЙКИ =====
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -268,6 +269,28 @@ def fetch_video_info(entry, soup=None):
         return extract_video_url_from_page(soup)
     return None, False
 
+def download_youtube_video(youtube_url):
+    """Скачивает YouTube-видео и возвращает BytesIO."""
+    try:
+        ydl_opts = {
+            'format': 'best[ext=mp4]',
+            'outtmpl': '-',
+            'quiet': True,
+            'noplaylist': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(youtube_url, download=False)
+            video_url = info.get('url')  # прямая ссылка
+            if video_url:
+                r = requests.get(video_url, stream=True, timeout=30)
+                r.raise_for_status()
+                video_bytes = io.BytesIO(r.content)
+                video_bytes.seek(0)
+                return video_bytes
+    except Exception as e:
+        print(f"Не удалось скачать YouTube-видео {youtube_url}: {e}")
+    return None
+
 def download_image(url, referer=None):
     try:
         headers = {
@@ -423,19 +446,13 @@ def build_post_html(title, body, emoji='📄'):
     return "\n".join(parts)
 
 def is_podcast_entry(entry):
-    """
-    Определяет, является ли запись выпуском подкаста (например, ЕВА-699).
-    Проверяем заголовок на паттерн "ЕВА-" и наличие "comments" в ссылке.
-    """
+    """Пропускаем выпуски подкастов (например, ЕВА-699)."""
     title = entry.get('title', '')
     link = entry.get('link', '')
-    # Проверка по заголовку: начинается с "ЕВА-" (регистр не важен)
     if re.match(r'^ЕВА-\d+', title, re.IGNORECASE):
         return True
-    # Если заголовок содержит "ЕВА" и в URL есть "/comments/"
     if 'ЕВА' in title.upper() and '/comments/' in link:
         return True
-    # Дополнительно: если в URL есть паттерн "/eva" или "eva-"
     if re.search(r'/eva\d+', link, re.IGNORECASE):
         return True
     return False
@@ -465,8 +482,16 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # YouTube: отправляем сообщение с ссылкой (превью покажется)
+    # YouTube: пробуем скачать и отправить как видео
     if video_url and is_youtube:
+        video_file = download_youtube_video(video_url)
+        if video_file:
+            try:
+                bot.send_video(CHANNEL_ID, video_file, caption=message_text[:1024], parse_mode='HTML')
+                return
+            except Exception as e:
+                print(f"Не удалось отправить скачанное видео: {e}")
+        # Если не получилось, отправляем ссылку с превью
         bot.send_message(
             CHANNEL_ID,
             message_text + f"\n\nСмотреть: {video_url}",
@@ -501,7 +526,6 @@ def main():
             continue
 
         for entry in feed.entries[:10]:
-            # Пропускаем выпуски подкастов
             if is_podcast_entry(entry):
                 print(f"Пропущен подкаст: {entry.get('title')}")
                 continue
