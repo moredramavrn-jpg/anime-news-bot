@@ -142,7 +142,17 @@ def extract_video_url_from_page(soup):
     if not soup:
         return None, False
 
-    # 1. Прямые видео теги
+    # 1. Кастомный тег <editor-body-youtube url="...">
+    yt_tag = soup.select_one('editor-body-youtube')
+    if yt_tag and yt_tag.get('url'):
+        return yt_tag['url'], True
+
+    # 2. YouTube iframe
+    iframe = soup.select_one('iframe[src*="youtube.com"], iframe[src*="youtu.be"]')
+    if iframe and iframe.get('src'):
+        return iframe['src'], True
+
+    # 3. Прямые видео теги
     video_tag = soup.select_one('video')
     if video_tag:
         src = video_tag.get('src')
@@ -152,17 +162,17 @@ def extract_video_url_from_page(soup):
         if source_tag and source_tag.get('src'):
             return source_tag['src'], False
 
-    # 2. meta og:video
+    # 4. meta og:video
     og_video = soup.select_one('meta[property="og:video"]')
     if og_video and og_video.get('content'):
         url = og_video['content']
         is_yt = 'youtube.com' in url or 'youtu.be' in url
         return url, is_yt
 
-    # 3. YouTube iframe
-    iframe = soup.select_one('iframe[src*="youtube.com"], iframe[src*="youtu.be"]')
-    if iframe and iframe.get('src'):
-        return iframe['src'], True
+    # 5. Ссылка на YouTube внутри текста (если есть)
+    yt_link = soup.select_one('a[href*="youtube.com"], a[href*="youtu.be"]')
+    if yt_link and yt_link.get('href'):
+        return yt_link['href'], True
 
     return None, False
 
@@ -253,32 +263,27 @@ def main():
         image_url = fetch_image_url(entry)
         video_url, is_youtube = fetch_video_info(entry)
 
-        # Формируем базовый пост
         if full_text:
             full_post = title + "\n\n" + full_text
         else:
             full_post = title
 
         try:
-            # Если есть видео (YouTube или прямой)
             if video_url:
-                # Добавляем ссылку на видео в текст
+                # Если есть видео, отправляем текст с ссылкой (или видео, если прямой файл)
                 if is_youtube:
                     post_with_video = full_post + "\n\nСмотреть видео: " + video_url
+                    text_to_send = smart_truncate(post_with_video, 4000)
+                    bot.send_message(CHANNEL_ID, text_to_send)
                 else:
-                    post_with_video = full_post  # для прямого видео ссылку не добавляем
-
-                # Отправляем текст, сокращённый до 4000 символов
-                text_to_send = smart_truncate(post_with_video, 4000)
-                # Если есть прямой mp4, пробуем отправить видео
-                if not is_youtube:
+                    # Прямой mp4/webm
                     try:
-                        bot.send_video(CHANNEL_ID, video_url, caption=smart_truncate(full_post, 1024))
+                        caption = smart_truncate(full_post, 1024)
+                        bot.send_video(CHANNEL_ID, video_url, caption=caption)
                     except Exception as e:
                         print(f"Не удалось отправить видео: {e}")
+                        text_to_send = smart_truncate(full_post, 4000)
                         bot.send_message(CHANNEL_ID, text_to_send)
-                else:
-                    bot.send_message(CHANNEL_ID, text_to_send)
             else:
                 # Если видео нет, работаем с картинкой
                 if image_url:
