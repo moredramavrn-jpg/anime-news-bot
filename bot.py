@@ -106,7 +106,6 @@ def extract_image_from_page(soup):
     return None
 
 def fetch_image_url(entry, soup=None):
-    """Получает URL картинки. Сначала из soup, затем из RSS."""
     if soup is None:
         link = entry.get('link')
         if link:
@@ -279,9 +278,7 @@ def format_news_body(text):
 
     paragraphs = [bold_quotes(p) for p in paragraphs]
 
-    if len(paragraphs) > 1:
-        paragraphs[0] = f"<i>{paragraphs[0]}</i>"
-
+    # Курсив не добавляем вообще
     return "\n\n".join(paragraphs)
 
 def escape_html(text):
@@ -293,10 +290,10 @@ def make_hashtag(text):
     for w in words:
         clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
         if clean_w:
-            clean_words.append(clean_w[0].upper() + clean_w[1:] if len(clean_w) > 1 else clean_w.upper())
+            clean_words.append(clean_w.lower())
     if not clean_words:
         return None
-    return '#' + ''.join(clean_words)
+    return '#' + '_'.join(clean_words)
 
 def extract_title_hashtag(title):
     match = re.search(r'«([^»]+)»', title)
@@ -359,7 +356,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # Отправка фото (если image_url есть, и видео не прямое)
+    # Отправка фото
     if image_url:
         try:
             bot.send_photo(CHANNEL_ID, image_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -392,8 +389,6 @@ def main():
         full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
         image_url = fetch_image_url(entry, soup)
         video_url, is_youtube = fetch_video_info(entry, soup)
-
-        print(f"DEBUG: title={title}, image_url={image_url}, video_url={video_url}, is_youtube={is_youtube}")
 
         try:
             send_post(title, full_text, link, image_url, video_url, is_youtube)
