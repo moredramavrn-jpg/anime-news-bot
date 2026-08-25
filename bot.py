@@ -106,7 +106,6 @@ def extract_image_from_page(soup):
     return None
 
 def fetch_image_url(entry, soup=None):
-    """Получает URL картинки. Сначала из soup, затем из RSS."""
     if soup is None:
         link = entry.get('link')
         if link:
@@ -206,7 +205,6 @@ def simple_truncate_by_sentences(text, max_len):
     return result
 
 def call_hf_api(prompt):
-    """Отправляет запрос в Hugging Face Inference API."""
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}",
         "Content-Type": "application/json"
@@ -234,7 +232,7 @@ def call_hf_api(prompt):
         return None
 
 def smart_truncate(text, max_len):
-    """Сокращает текст через Hugging Face, если он длиннее max_len. Иначе возвращает как есть."""
+    """Сокращает текст через HF, если он длиннее max_len, иначе возвращает как есть."""
     if len(text) <= max_len:
         return text
 
@@ -245,7 +243,6 @@ def smart_truncate(text, max_len):
 """
     shortened = call_hf_api(prompt)
     if shortened and len(shortened) >= 50:
-        # Если модель вернула слишком длинный ответ, обрежем по предложениям
         if len(shortened) > max_len:
             shortened = simple_truncate_by_sentences(shortened, max_len)
         return shortened
@@ -341,6 +338,12 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
+    # Сокращаем тело новости под лимиты
+    if image_url and not video_url:  # будет фото с подписью
+        body = smart_truncate(body, 800)  # оставляем место для заголовка, тегов и эмодзи
+    else:  # обычное сообщение или видео (для видео подпись тоже ограничена, но там и так коротко)
+        body = smart_truncate(body, 3000)
+
     message_text = build_post_html(title, body, emoji)
 
     keyboard = None
@@ -348,6 +351,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
+    # Отправка прямого видео (mp4)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -355,16 +359,15 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    if image_url:
+    # Отправка фото
+    if image_url and not video_url:
         try:
-            r = requests.head(image_url, timeout=5)
-            if r.status_code == 200:
-                short_caption = message_text[:1000]
-                bot.send_photo(CHANNEL_ID, image_url, caption=short_caption, parse_mode='HTML', reply_markup=keyboard)
-                return
+            bot.send_photo(CHANNEL_ID, image_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
+            return
         except Exception as e:
             print(f"Не удалось отправить фото: {e}")
 
+    # Обычное сообщение (если фото/видео нет или не удалось)
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 def main():
