@@ -106,6 +106,7 @@ def extract_image_from_page(soup):
     return None
 
 def fetch_image_url(entry, soup=None):
+    """Получает URL картинки. Сначала из soup, затем из RSS."""
     if soup is None:
         link = entry.get('link')
         if link:
@@ -232,7 +233,6 @@ def call_hf_api(prompt):
         return None
 
 def smart_truncate(text, max_len):
-    """Сокращает текст через HF, если он длиннее max_len, иначе возвращает как есть."""
     if len(text) <= max_len:
         return text
 
@@ -338,11 +338,11 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
-    # Сокращаем тело новости под лимиты
-    if image_url and not video_url:  # будет фото с подписью
-        body = smart_truncate(body, 800)  # оставляем место для заголовка, тегов и эмодзи
-    else:  # обычное сообщение или видео (для видео подпись тоже ограничена, но там и так коротко)
-        body = smart_truncate(body, 3000)
+    # Готовим тело: если есть фото, сокращаем до 800, иначе до 3000
+    if image_url:
+        body = smart_truncate(body, 800) if body else ""
+    else:
+        body = smart_truncate(body, 3000) if body else ""
 
     message_text = build_post_html(title, body, emoji)
 
@@ -351,7 +351,7 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
-    # Отправка прямого видео (mp4)
+    # Отправка прямого видео (mp4/webm)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -359,15 +359,15 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # Отправка фото
-    if image_url and not video_url:
+    # Отправка фото (если image_url есть, и видео не прямое)
+    if image_url:
         try:
             bot.send_photo(CHANNEL_ID, image_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
             return
         except Exception as e:
             print(f"Не удалось отправить фото: {e}")
 
-    # Обычное сообщение (если фото/видео нет или не удалось)
+    # Если фото/видео не отправились, отправляем обычное сообщение
     bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
 
 def main():
@@ -392,6 +392,8 @@ def main():
         full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
         image_url = fetch_image_url(entry, soup)
         video_url, is_youtube = fetch_video_info(entry, soup)
+
+        print(f"DEBUG: title={title}, image_url={image_url}, video_url={video_url}, is_youtube={is_youtube}")
 
         try:
             send_post(title, full_text, link, image_url, video_url, is_youtube)
