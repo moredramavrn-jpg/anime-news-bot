@@ -4,6 +4,8 @@ import html
 import feedparser
 import telebot
 import requests
+import pymorphy3
+from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from telebot import types
 
@@ -23,6 +25,7 @@ POSTED_FILE = "posted.txt"
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
+morph = pymorphy3.MorphAnalyzer()
 
 def load_posted():
     if not os.path.exists(POSTED_FILE):
@@ -44,6 +47,14 @@ def clean_html(raw_html):
     text = soup.get_text(separator="\n")
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n".join(lines)
+
+def make_absolute(url, base_domain):
+    """Преобразует относительный URL в абсолютный."""
+    if url.startswith('//'):
+        return 'https:' + url
+    if url.startswith('/'):
+        return urljoin(base_domain, url)
+    return url
 
 def get_page_soup(url):
     try:
@@ -101,72 +112,81 @@ def fetch_full_text(entry):
         return clean_html(summary)
     return ""
 
-def extract_image_from_page(soup):
+def extract_image_from_page(soup, page_url=None):
     if not soup:
         return None
 
     # Goha.ru
     img_tag = soup.select_one('div.editor-body-image img')
     if img_tag and img_tag.get('src'):
-        return img_tag['src']
+        return make_absolute(img_tag['src'], page_url or 'https://www.goha.ru')
+
     img_tag = soup.select_one('div.editor-body img')
     if img_tag and img_tag.get('src'):
-        return img_tag['src']
+        return make_absolute(img_tag['src'], page_url or 'https://www.goha.ru')
 
     # КГ-Портал
     img_tag = soup.select_one('div.news_cover_center img')
     if img_tag and img_tag.get('src'):
-        return img_tag['src']
+        return make_absolute(img_tag['src'], page_url or 'https://kg-portal.ru')
 
     # og:image
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
-        return og_image['content']
+        return make_absolute(og_image['content'], page_url or 'https://kg-portal.ru')
 
     return None
 
 def fetch_image_url(entry, soup=None):
-    if soup is None:
-        link = entry.get('link')
-        if link:
-            soup = get_page_soup(link)
+    link = entry.get('link')
+    if soup is None and link:
+        soup = get_page_soup(link)
+
     if soup:
-        image = extract_image_from_page(soup)
+        image = extract_image_from_page(soup, link)
         if image:
             return image
+
     # Fallback на RSS
     image = extract_image_url_from_entry(entry)
     if image:
         return image
-    print(f"Картинка не найдена для {entry.get('link', '')}")
+
+    print(f"Картинка не найдена для {link}")
     return None
 
 def extract_image_url_from_entry(entry):
+    base_domain = 'https://www.goha.ru'  # предположим, но лучше определить по link
+    if 'link' in entry:
+        link = entry.get('link', '')
+        if 'kg-portal.ru' in link:
+            base_domain = 'https://kg-portal.ru'
+
     if 'media_content' in entry:
         for media in entry.media_content:
             if 'url' in media:
-                return media['url']
+                return make_absolute(media['url'], base_domain)
     if 'media_thumbnail' in entry:
         for media in entry.media_thumbnail:
             if 'url' in media:
-                return media['url']
+                return make_absolute(media['url'], base_domain)
     if 'enclosures' in entry and entry.enclosures:
         for enc in entry.enclosures:
             if 'href' in enc and enc.get('type', '').startswith('image'):
-                return enc['href']
+                return make_absolute(enc['href'], base_domain)
             if 'url' in enc and enc.get('type', '').startswith('image'):
-                return enc['url']
+                return make_absolute(enc['url'], base_domain)
     summary = entry.get('summary', '') or entry.get('description', '')
     if summary:
         match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', summary, re.IGNORECASE)
         if match:
-            return match.group(1)
+            return make_absolute(match.group(1), base_domain)
     content = entry.get('content', [])
     for c in content:
         if 'value' in c:
             match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', c['value'], re.IGNORECASE)
             if match:
-                return match.group(1)
+                return make_absolute(match.group(1), base_domain)
     return None
 
 def extract_video_url_from_page(soup):
@@ -197,7 +217,7 @@ def extract_video_url_from_page(soup):
         is_yt = 'youtube.com' in url or 'youtu.be' in url
         return url, is_yt
 
-    # Ссылка на YouTube (КГ-Портал иногда использует такой формат)
+    # Ссылка на YouTube (КГ-Портал)
     yt_link = soup.select_one('a[href*="youtube.com"], a[href*="youtu.be"]')
     if yt_link and yt_link.get('href'):
         return yt_link['href'], True
@@ -306,12 +326,22 @@ def escape_html(text):
     return html.escape(text, quote=False)
 
 def make_hashtag(text):
+    """
+    Преобразует название аниме в хэштег.
+    Слова приводятся к нормальной форме через pymorphy3,
+    затем соединяются символом '_' и переводятся в нижний регистр.
+    """
     words = text.strip().split()
     clean_words = []
     for w in words:
         clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
         if clean_w:
-            clean_words.append(clean_w.lower())
+            try:
+                parsed = morph.parse(clean_w)[0]
+                normal = parsed.normal_form
+            except Exception:
+                normal = clean_w
+            clean_words.append(normal.lower())
     if not clean_words:
         return None
     return '#' + '_'.join(clean_words)
