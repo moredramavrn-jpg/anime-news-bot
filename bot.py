@@ -13,14 +13,12 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 HF_API_KEY = os.getenv("HF_API_KEY")
 
-# Несколько источников RSS
 RSS_URLS = [
     "https://www.goha.ru/rss/anime",
     "https://kg-portal.ru/rss/news_anime.rss"
 ]
 
 POSTED_FILE = "posted.txt"
-
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
@@ -47,7 +45,6 @@ def clean_html(raw_html):
     return "\n".join(lines)
 
 def make_absolute(url, base_domain):
-    """Преобразует относительный URL в абсолютный."""
     if url.startswith('//'):
         return 'https:' + url
     if url.startswith('/'):
@@ -73,13 +70,10 @@ def extract_full_text_from_page(soup):
     if not soup:
         return ""
 
-    # Goha.ru: div.editor-body
     main_content = soup.select_one('div.editor-body')
-    # КГ-Портал: div.news_text
     if not main_content:
         main_content = soup.select_one('div.news_text')
 
-    # Запасные селекторы
     if not main_content:
         selectors = [
             'article', 'div.news-content', 'div.content', 'div.news-text',
@@ -110,31 +104,57 @@ def fetch_full_text(entry):
         return clean_html(summary)
     return ""
 
+# ========== УЛУЧШЕННОЕ ИЗВЛЕЧЕНИЕ КАРТИНОК ==========
 def extract_image_from_page(soup, page_url=None):
     if not soup:
         return None
 
+    # Расширенный список селекторов
     selectors = [
-        'div.editor-body-image img',   # Goha.ru
+        'div.editor-body-image img',      # Goha.ru
         'div.editor-body img',
-        'div.news_cover_center img',   # КГ-Портал
+        'div.news_cover_center img',      # КГ-Портал
         'div.news_text img',
         'div.news_box img',
         'article img',
+        'div.news_image img',             # возможные варианты КГ
+        'div.article_image img',
+        'div.full_news img',
+        'div.news_content img',
+        'div.news-full__text img',
     ]
 
     for selector in selectors:
         img_tag = soup.select_one(selector)
         if img_tag:
-            src = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-original')
+            src = (img_tag.get('src') or img_tag.get('data-src') or
+                   img_tag.get('data-original') or img_tag.get('data-lazy-src'))
             if src:
                 return make_absolute(src, page_url or 'https://kg-portal.ru')
 
+    # Если точные селекторы не сработали, ищем все img внутри div.news_text (если он есть)
+    news_text = soup.select_one('div.news_text')
+    if news_text:
+        for img in news_text.find_all('img'):
+            src = (img.get('src') or img.get('data-src') or
+                   img.get('data-original') or img.get('data-lazy-src'))
+            if src:
+                return make_absolute(src, page_url or 'https://kg-portal.ru')
+
+    # og:image
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
         return make_absolute(og_image['content'], page_url or 'https://kg-portal.ru')
 
+    # Поиск любого img с расширением изображения
+    for img in soup.find_all('img'):
+        src = (img.get('src') or img.get('data-src') or
+               img.get('data-original') or img.get('data-lazy-src'))
+        if src and re.search(r'\.(jpg|jpeg|png|webp)(\?.*)?$', src, re.IGNORECASE):
+            return make_absolute(src, page_url or 'https://kg-portal.ru')
+
     return None
+# ==================================================
 
 def fetch_image_url(entry, soup=None):
     link = entry.get('link')
@@ -146,6 +166,7 @@ def fetch_image_url(entry, soup=None):
         if image:
             return image
 
+    # Fallback на RSS
     image = extract_image_url_from_entry(entry)
     if image:
         return image
@@ -188,7 +209,6 @@ def extract_image_url_from_entry(entry):
     return None
 
 def is_youtube_video(url):
-    """Проверяет, является ли URL конкретным видео YouTube, а не каналом/пользователем."""
     return ('youtube.com/watch' in url) or ('youtu.be/' in url)
 
 def extract_video_url_from_page(soup):
@@ -340,11 +360,9 @@ def escape_html(text):
     return html.escape(text, quote=False)
 
 def make_hashtag(text):
-    """Преобразует название аниме в хэштег: нижний регистр, пробелы в '_', без изменения формы слов."""
     words = text.strip().split()
     clean_words = []
     for w in words:
-        # Убираем все символы, кроме букв и цифр (сохраняем пробелы)
         clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
         if clean_w:
             clean_words.append(clean_w.lower())
