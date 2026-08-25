@@ -15,7 +15,7 @@ RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
 client = Groq(api_key=GROQ_API_KEY)
-MODEL_NAME = "qwen/qwen3.6-27b"  # можно заменить на "openai/gpt-oss-20b"
+MODEL_NAME = "openai/gpt-oss-20b"   # <-- модель, которую вы выбрали
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -139,48 +139,46 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
-def clean_thinking(text):
-    """Удаляет блок <think>...</think> и всё, что до него."""
-    if '<think>' in text:
-        # Ищем закрывающий тег </think>
-        end_idx = text.find('</think>')
-        if end_idx != -1:
-            return text[end_idx + len('</think>'):].strip()
-        else:
-            # Если нет закрывающего, пробуем взять всё после <think>
-            start_idx = text.find('<think>')
-            if start_idx != -1:
-                return text[start_idx + len('<think>'):].strip()
-    return text.strip()
+def clean_groq_response(text):
+    """Удаляет <think> и всё до последнего </think>, а также HTML-теги."""
+    # Ищем последний </think>
+    end_idx = text.rfind('</think>')
+    if end_idx != -1:
+        text = text[end_idx + len('</think>'):].strip()
+    else:
+        start_idx = text.find('<think>')
+        if start_idx != -1:
+            text = text[start_idx + len('<think>'):].strip()
+    # Убираем возможные остатки тегов
+    text = re.sub(r'<[^>]+>', '', text)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return "\n".join(lines)
 
 def smart_truncate(text, max_len):
-    """Сокращает текст через ИИ, если он длиннее max_len. Без ссылок."""
+    """Переводит и сокращает текст через Groq, если он длиннее max_len."""
     if len(text) <= max_len:
         return text
 
-    prompt = f"""Сократи следующий текст новости до {max_len} символов, сохранив все ключевые факты и общий смысл. Пиши на русском языке. Не добавляй ничего от себя.
+    prompt = f"""Ты — редактор новостного канала. Переведи следующий текст на русский язык и сократи его до {max_len} символов, сохранив все ключевые факты и общий смысл. Не выводи никаких пояснений, мыслей или тегов. Выведи только готовый сокращённый текст на русском языке.
 
-Текст:
+Исходный текст:
 {text}
 """
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
-                {"role": "system", "content": "Ты — редактор, который умеет сокращать тексты без потери смысла."},
+                {"role": "system", "content": "Ты — редактор, который переводит и сокращает тексты без потери смысла."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
-            max_tokens=700
+            max_tokens=800
         )
         raw = response.choices[0].message.content.strip()
-        # Убираем размышления
-        shortened = clean_thinking(raw)
-        # Если после очистки осталось слишком мало, обрезаем исходный текст
+        shortened = clean_groq_response(raw)
         if len(shortened) < 50:
-            print("Модель вернула плохой ответ, обрезаем исходный текст")
+            print("Модель вернула слишком короткий ответ, применяем обрезание исходного текста")
             return text[:max_len]
-        # Если результат всё же длиннее лимита, обрезаем
         if len(shortened) > max_len:
             shortened = shortened[:max_len]
         return shortened
