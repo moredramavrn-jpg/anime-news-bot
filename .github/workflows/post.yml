@@ -19,7 +19,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install feedparser groq pyTelegramBotAPI requests
+        run: pip install feedparser groq pyTelegramBotAPI requests beautifulsoup4 lxml
 
       - name: Run bot
         env:
