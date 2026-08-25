@@ -5,7 +5,7 @@ import io
 import feedparser
 import telebot
 import requests
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from telebot import types
 
@@ -14,7 +14,6 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 HF_API_KEY = os.getenv("HF_API_KEY")
 
-# Источники RSS
 RSS_URLS = [
     "https://www.goha.ru/rss/anime",
     "https://kg-portal.ru/rss/news_anime.rss"
@@ -55,7 +54,6 @@ def make_absolute(url, base_domain):
 
 def get_page_soup(url):
     try:
-        # Определяем домен для правильного Referer
         domain = urlparse(url).netloc
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -74,13 +72,10 @@ def extract_full_text_from_page(soup):
     if not soup:
         return ""
 
-    # Goha.ru: div.editor-body
-    main_content = soup.select_one('div.editor-body')
-    # КГ-Портал: div.news_text
+    main_content = soup.select_one('div.editor-body')  # Goha.ru
     if not main_content:
-        main_content = soup.select_one('div.news_text')
+        main_content = soup.select_one('div.news_text')  # КГ-Портал
 
-    # Запасные селекторы
     if not main_content:
         selectors = [
             'article', 'div.news-content', 'div.content', 'div.news-text',
@@ -115,7 +110,6 @@ def extract_image_from_page(soup, page_url=None):
     if not soup:
         return None
 
-    # Расширенный список селекторов
     selectors = [
         'div.editor-body-image img',      # Goha.ru
         'div.editor-body img',
@@ -138,7 +132,6 @@ def extract_image_from_page(soup, page_url=None):
             if src:
                 return make_absolute(src, page_url or 'https://kg-portal.ru')
 
-    # Если точные селекторы не сработали, ищем все img внутри div.news_text
     news_text = soup.select_one('div.news_text')
     if news_text:
         for img in news_text.find_all('img'):
@@ -147,12 +140,10 @@ def extract_image_from_page(soup, page_url=None):
             if src:
                 return make_absolute(src, page_url or 'https://kg-portal.ru')
 
-    # og:image
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
         return make_absolute(og_image['content'], page_url or 'https://kg-portal.ru')
 
-    # Поиск любого img с расширением изображения
     for img in soup.find_all('img'):
         src = (img.get('src') or img.get('data-src') or
                img.get('data-original') or img.get('data-lazy-src'))
@@ -272,7 +263,6 @@ def fetch_video_info(entry, soup=None):
     return None, False
 
 def download_image(url, referer=None):
-    """Скачивает изображение и возвращает BytesIO."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -351,6 +341,15 @@ def format_news_body(text):
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = re.sub(r' {2,}', ' ', text).strip()
 
+    # Убираем нежелательные фразы
+    unwanted_phrases = [
+        r'Читать дальше\s*→?',
+        r'Читать полностью\s*:?',
+        r'Источник\s*:',
+    ]
+    for pattern in unwanted_phrases:
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+
     if '\n\n' in text:
         paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
     else:
@@ -379,7 +378,6 @@ def escape_html(text):
     return html.escape(text, quote=False)
 
 def make_hashtag(text):
-    """Преобразует название аниме в хэштег: нижний регистр, пробелы в '_'."""
     words = text.strip().split()
     clean_words = []
     for w in words:
@@ -420,7 +418,7 @@ def build_post_html(title, body, emoji='📄'):
     return "\n".join(parts)
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
-    # Определяем эмодзи для заголовка
+    # Определяем эмодзи
     if video_url and is_youtube:
         emoji = '🎬'
     elif video_url and not is_youtube:
@@ -430,20 +428,21 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
-    # Готовим тело: если есть фото, сокращаем до 800, иначе до 3000
-    if image_url:
+    # Сокращаем тело в зависимости от наличия медиа
+    if video_url or image_url:
         body = smart_truncate(body, 800) if body else ""
     else:
         body = smart_truncate(body, 3000) if body else ""
 
     message_text = build_post_html(title, body, emoji)
 
+    # Кнопка для YouTube
     keyboard = None
     if video_url and is_youtube:
         keyboard = types.InlineKeyboardMarkup(row_width=1)
         keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
-    # Отправка прямого видео (mp4/webm)
+    # Приоритет: видео (прямое), затем видео (YouTube), затем картинка, затем текст
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -451,18 +450,22 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # Отправка фото (скачиваем сами для обхода hotlink-защиты)
+    if video_url and is_youtube:
+        # Отправляем текстовое сообщение с кнопкой (картинку не отправляем)
+        bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
+        return
+
     if image_url:
         image_file = download_image(image_url, referer=link)
         if image_file:
             try:
-                bot.send_photo(CHANNEL_ID, image_file, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
+                bot.send_photo(CHANNEL_ID, image_file, caption=message_text[:1024], parse_mode='HTML')
                 return
             except Exception as e:
                 print(f"Не удалось отправить фото: {e}")
 
-    # Обычное сообщение
-    bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True, reply_markup=keyboard)
+    # Если ничего не отправлено, отправляем текст
+    bot.send_message(CHANNEL_ID, message_text, parse_mode='HTML', disable_web_page_preview=True)
 
 def main():
     posted_links = load_posted()
