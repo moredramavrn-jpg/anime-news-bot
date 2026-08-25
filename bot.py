@@ -181,29 +181,39 @@ def fetch_video_info(entry):
     return None, False
 
 def extract_tags(entry, soup):
+    """
+    Извлекает теги новости из RSS или со страницы, очищает их и возвращает не более 5.
+    """
     tags = []
     if 'tags' in entry:
         for tag in entry.tags:
             term = tag.get('term', '').strip()
-            if term and term not in tags:
+            if term:
                 tags.append(term)
     if soup:
         for meta in soup.select('meta[property="og:tag"]'):
             content = meta.get('content', '').strip()
-            if content and content not in tags:
+            if content:
                 tags.append(content)
         if not tags:
             tag_links = soup.select('div.article-tags a')
             for a in tag_links:
                 t = a.get_text(strip=True)
-                if t and t not in tags:
+                if t:
                     tags.append(t)
+
+    # Очистка: оставляем только буквы, цифры, дефис и подчёркивание
     clean_tags = []
+    seen = set()
     for t in tags:
-        t = t.strip().replace(' ', '_')
-        if len(t) > 30:
-            t = t[:30]
-        if t and t not in clean_tags:
+        # Удаляем все символы, кроме \w (буквы/цифры/_ ) и дефиса
+        t = re.sub(r'[^\w\-]', '', t, flags=re.UNICODE)
+        if not t:
+            continue
+        if len(t) > 20:
+            t = t[:20]
+        if t not in seen:
+            seen.add(t)
             clean_tags.append(t)
     return clean_tags[:5]
 
@@ -302,6 +312,10 @@ def escape_html(text):
     return html.escape(text, quote=False)
 
 def build_post_html(title, body, tags, date_str):
+    """
+    Собирает итоговый текст поста с тегами.
+    Всегда добавляет #аниме и #новости, затем специфические теги.
+    """
     title_esc = escape_html(title)
     body_formatted = format_news_body(body) if body else ""
 
@@ -314,27 +328,30 @@ def build_post_html(title, body, tags, date_str):
         parts.append("──────────")
         parts.append(body_formatted)
 
-    if tags:
-        hashtags = " ".join(f"#{tag}" for tag in tags)
-        parts.append("")
-        parts.append(hashtags)
+    # Добавляем базовые хэштеги
+    hashtags = ["#аниме", "#новости"]
+    for tag in tags:
+        tag_hashtag = f"#{tag}"
+        if tag_hashtag not in hashtags:
+            hashtags.append(tag_hashtag)
+    # Ограничим общее количество хэштегов (например, 7)
+    hashtags = hashtags[:7]
+
+    parts.append("")
+    parts.append(" ".join(hashtags))
 
     return "\n".join(parts)
 
 def send_post(title, body, tags, date_str, link, image_url, video_url, is_youtube):
-    """Отправляет пост с кнопками «Читать полностью» и «Смотреть видео»."""
+    """Отправляет пост. Кнопка «Читать полностью» убрана, осталась только «Смотреть видео» при наличии YouTube."""
     message_text = build_post_html(title, body, tags, date_str)
 
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    buttons = []
-    if link:
-        buttons.append(types.InlineKeyboardButton("🔗 Читать полностью", url=link))
+    keyboard = None
     if video_url and is_youtube:
-        buttons.append(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
-    if buttons:
-        keyboard.add(*buttons)
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        keyboard.add(types.InlineKeyboardButton("🎬 Смотреть видео", url=video_url))
 
-    # Прямое видео
+    # Прямое видео (mp4/webm)
     if video_url and not is_youtube:
         try:
             bot.send_video(CHANNEL_ID, video_url, caption=message_text[:1024], parse_mode='HTML', reply_markup=keyboard)
@@ -374,7 +391,6 @@ def main():
 
         title = entry.get('title', 'Без названия')
 
-        # Загружаем страницу для полного текста и тегов
         soup = get_page_soup(link) if link else None
         full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
         image_url = fetch_image_url(entry)
@@ -383,7 +399,7 @@ def main():
 
         date_str = entry.get('published', '') or entry.get('updated', '')
         if date_str:
-            date_str = date_str.split('T')[0]  # только дата
+            date_str = date_str.split('T')[0]
 
         try:
             send_post(title, full_text, tags, date_str, link, image_url, video_url, is_youtube)
