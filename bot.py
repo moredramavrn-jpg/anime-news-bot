@@ -17,14 +17,11 @@ RSS_URLS = [
     "https://myanimelist.net/rss/news.xml"
 ]
 
-# Файл для хранения опубликованных ссылок
 POSTED_FILE = "posted.txt"
 
-# Инициализация бота и клиента Groq
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
 
-# ===== ФУНКЦИИ ДЛЯ ХРАНЕНИЯ ССЫЛОК =====
 def load_posted():
     if not os.path.exists(POSTED_FILE):
         return set()
@@ -36,25 +33,18 @@ def save_posted(posted_links):
         for link in posted_links:
             f.write(link + '\n')
 
-# ===== ОЧИСТКА ОТ РАЗМЫШЛЕНИЙ МОДЕЛИ =====
 def clean_thinking(text):
-    """
-    Удаляет блок <think>...</think>, если модель его добавила.
-    Возвращает текст после </think>, либо весь текст, если тегов нет.
-    """
+    """Удаляет блок <think>...</think>, если модель его добавила."""
     if '<think>' in text:
-        # Ищем закрывающий тег </think>
         end_idx = text.find('</think>')
         if end_idx != -1:
             return text[end_idx + len('</think>'):].strip()
         else:
-            # Если закрывающего нет, пробуем найти начало <think> и взять всё после
             start_idx = text.find('<think>')
             if start_idx != -1:
                 return text[start_idx + len('<think>'):].strip()
     return text.strip()
 
-# ===== ГЕНЕРАЦИЯ ПОСТА =====
 def generate_post(title, summary):
     prompt = f"""Ты — редактор популярного аниме-канала в Telegram. Тебе дали новость (на английском или другом языке).
 Твоя задача — НЕ просто перевести её, а сделать уникальный пост, который не выглядит как копипаст.
@@ -79,7 +69,7 @@ def generate_post(title, summary):
 
     try:
         response = client.chat.completions.create(
-            model="qwen/qwen3.6-27b",
+            model="openai/gpt-oss-20b",   # <-- Новая модель
             messages=[
                 {"role": "system", "content": "Ты — талантливый копирайтер. Ты всегда пишешь уникальные, живые тексты на русском языке."},
                 {"role": "user", "content": prompt}
@@ -94,7 +84,6 @@ def generate_post(title, summary):
         print(f"Ошибка генерации: {e}")
         return f"{title}\n\n{summary[:200]}...\n\n#аниме #новости"
 
-# ===== ИЗВЛЕЧЕНИЕ КАРТИНКИ =====
 def extract_image_url(entry):
     if 'media_content' in entry:
         for media in entry.media_content:
@@ -123,7 +112,6 @@ def extract_image_url(entry):
                 return match.group(1)
     return None
 
-# ===== ОСНОВНАЯ ЛОГИКА =====
 def main():
     posted_links = load_posted()
     new_posts = 0
