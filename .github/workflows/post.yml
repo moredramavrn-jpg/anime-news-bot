@@ -6,7 +6,7 @@ on:
   workflow_dispatch:         # ручной запуск
 
 permissions:
-  contents: write            # разрешаем коммитить posted.txt
+  contents: write
 
 jobs:
   post:
@@ -19,13 +19,14 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install feedparser pyTelegramBotAPI requests beautifulsoup4 lxml yt-dlp
+        run: |
+          pip install feedparser pyTelegramBotAPI requests beautifulsoup4 lxml yt-dlp
 
       - name: Run bot
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GIGACHAT_AUTHORIZATION_KEY: ${{ secrets.GIGACHAT_AUTHORIZATION_KEY }}
         run: python bot.py
 
       - name: Commit posted.txt if changed
