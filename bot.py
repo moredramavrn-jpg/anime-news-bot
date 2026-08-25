@@ -54,10 +54,8 @@ def extract_full_text_from_page(soup):
     """Извлекает полный текст новости из страницы."""
     if not soup:
         return ""
-    # Основной контейнер на Goha.ru
     main_content = soup.select_one('div.editor-body')
     if not main_content:
-        # Запасные селекторы
         selectors = [
             'article',
             'div.news-content',
@@ -87,20 +85,18 @@ def extract_image_from_page(soup):
     """Извлекает URL изображения из страницы новости."""
     if not soup:
         return None
-    # Сначала ищем в div.editor-body-image img, затем в любом img внутри editor-body
     img_tag = soup.select_one('div.editor-body-image img')
     if not img_tag:
         img_tag = soup.select_one('div.editor-body img')
     if img_tag and img_tag.get('src'):
         return img_tag['src']
-    # Если не нашли, пробуем og:image
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
         return og_image['content']
     return None
 
 def fetch_full_text(entry):
-    """Основная функция получения полного текста новости."""
+    """Получает полный текст новости (сначала страница, потом RSS)."""
     link = entry.get('link')
     if link:
         soup = get_page_soup(link)
@@ -108,14 +104,13 @@ def fetch_full_text(entry):
             full_text = extract_full_text_from_page(soup)
             if full_text:
                 return full_text
-    # Fallback: берём описание из RSS
     summary = entry.get('summary', '') or entry.get('description', '')
     if summary:
         return clean_html(summary)
     return ""
 
 def fetch_image_url(entry):
-    """Получает URL изображения: сначала со страницы, затем из RSS."""
+    """Получает URL изображения (сначала страница, потом RSS)."""
     link = entry.get('link')
     if link:
         soup = get_page_soup(link)
@@ -123,11 +118,9 @@ def fetch_image_url(entry):
             image = extract_image_from_page(soup)
             if image:
                 return image
-    # Fallback на RSS
     return extract_image_url_from_entry(entry)
 
 def extract_image_url_from_entry(entry):
-    # Проверка media_content, media_thumbnail, enclosures, а также <img> в summary/content
     if 'media_content' in entry:
         for media in entry.media_content:
             if 'url' in media:
@@ -156,17 +149,15 @@ def extract_image_url_from_entry(entry):
     return None
 
 def format_post(title, full_text, link):
-    """Формирует пост с обрезкой под лимиты Telegram."""
+    """Формирует пост. Ссылка добавляется только при обрезке."""
     text = title.strip()
     if full_text:
-        max_len = 3500  # для обычного сообщения
+        max_len = 3500
         if len(full_text) > max_len:
             full_text = full_text[:max_len] + "...\n\nЧитать полностью: " + link
-        else:
-            full_text += "\n\nИсточник: " + link
+        # иначе ссылку не добавляем
         text += f"\n\n{full_text}"
-    else:
-        text += f"\n\nИсточник: {link}"
+    # если full_text пуст, оставляем только заголовок
     return text
 
 def main():
@@ -186,7 +177,6 @@ def main():
             continue
 
         title = entry.get('title', 'Без названия')
-        # Получаем полный текст и картинку
         full_text = fetch_full_text(entry)
         image_url = fetch_image_url(entry)
 
@@ -194,11 +184,18 @@ def main():
 
         try:
             if image_url:
-                # Отправляем фото; если текст слишком длинный, отдельным сообщением
-                if len(post_text) <= 1024:
-                    bot.send_photo(CHANNEL_ID, image_url, caption=post_text)
-                else:
-                    bot.send_photo(CHANNEL_ID, image_url)
+                # Проверяем доступность картинки (не обязательно, но желательно)
+                try:
+                    r = requests.head(image_url, timeout=5)
+                    if r.status_code == 200:
+                        if len(post_text) <= 1024:
+                            bot.send_photo(CHANNEL_ID, image_url, caption=post_text)
+                        else:
+                            bot.send_photo(CHANNEL_ID, image_url)
+                            bot.send_message(CHANNEL_ID, post_text)
+                    else:
+                        bot.send_message(CHANNEL_ID, post_text)
+                except:
                     bot.send_message(CHANNEL_ID, post_text)
             else:
                 bot.send_message(CHANNEL_ID, post_text)
