@@ -116,20 +116,24 @@ def extract_image_from_page(soup, page_url=None):
     if not soup:
         return None
 
-    # Goha.ru
-    img_tag = soup.select_one('div.editor-body-image img')
-    if img_tag and img_tag.get('src'):
-        return make_absolute(img_tag['src'], page_url or 'https://www.goha.ru')
+    # Перечень селекторов для обоих сайтов
+    selectors = [
+        'div.editor-body-image img',
+        'div.editor-body img',
+        'div.news_cover_center img',
+        'div.news_text img',
+        'div.news_box img',
+        'article img',
+    ]
 
-    img_tag = soup.select_one('div.editor-body img')
-    if img_tag and img_tag.get('src'):
-        return make_absolute(img_tag['src'], page_url or 'https://www.goha.ru')
-
-    # КГ-Портал
-    img_tag = soup.select_one('div.news_cover_center img')
-    if img_tag and img_tag.get('src'):
-        return make_absolute(img_tag['src'], page_url or 'https://kg-portal.ru')
-
+    for selector in selectors:
+        img_tag = soup.select_one(selector)
+        if img_tag:
+            # Проверяем атрибуты src, data-src, data-original
+            src = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-original')
+            if src:
+                return make_absolute(src, page_url or 'https://kg-portal.ru')
+    
     # og:image
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
@@ -240,7 +244,6 @@ def extract_video_url_from_page(soup):
     # 6. Поиск видеофайлов в скриптах (mp4/webm)
     scripts = soup.find_all('script')
     script_text = ' '.join(s.get_text() for s in scripts)
-    # Ищем упоминания sources: или vodQualities и извлекаем URL с расширением видео
     pattern = r'(?:sources|vodQualities)[^{]*?["\']src["\']\s*:\s*["\']([^"\']+\.(?:mp4|webm))'
     match = re.search(pattern, script_text, re.IGNORECASE)
     if match:
