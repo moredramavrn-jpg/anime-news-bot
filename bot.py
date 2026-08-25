@@ -15,7 +15,7 @@ RSS_URL = "https://www.goha.ru/rss/anime"
 POSTED_FILE = "posted.txt"
 
 client = Groq(api_key=GROQ_API_KEY)
-MODEL_NAME = "qwen/qwen3.6-27b"  # более стабильная модель для русского языка
+MODEL_NAME = "qwen/qwen3.6-27b"  # можно заменить на "openai/gpt-oss-20b"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -139,12 +139,26 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
+def clean_thinking(text):
+    """Удаляет блок <think>...</think> и всё, что до него."""
+    if '<think>' in text:
+        # Ищем закрывающий тег </think>
+        end_idx = text.find('</think>')
+        if end_idx != -1:
+            return text[end_idx + len('</think>'):].strip()
+        else:
+            # Если нет закрывающего, пробуем взять всё после <think>
+            start_idx = text.find('<think>')
+            if start_idx != -1:
+                return text[start_idx + len('<think>'):].strip()
+    return text.strip()
+
 def smart_truncate(text, max_len):
-    """Сокращает текст, сохраняя смысл. Без ссылок."""
+    """Сокращает текст через ИИ, если он длиннее max_len. Без ссылок."""
     if len(text) <= max_len:
         return text
 
-    prompt = f"""Сократи следующий текст новости до {max_len} символов, сохранив все ключевые факты и общий смысл. Пиши на русском языке. Ничего не добавляй от себя.
+    prompt = f"""Сократи следующий текст новости до {max_len} символов, сохранив все ключевые факты и общий смысл. Пиши на русском языке. Не добавляй ничего от себя.
 
 Текст:
 {text}
@@ -157,14 +171,16 @@ def smart_truncate(text, max_len):
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3,
-            max_tokens=500
+            max_tokens=700
         )
-        shortened = response.choices[0].message.content.strip()
-        # Проверяем, что ответ не пустой и не слишком короткий
+        raw = response.choices[0].message.content.strip()
+        # Убираем размышления
+        shortened = clean_thinking(raw)
+        # Если после очистки осталось слишком мало, обрезаем исходный текст
         if len(shortened) < 50:
-            print("Модель вернула слишком короткий текст, обрезаем обычным способом")
+            print("Модель вернула плохой ответ, обрезаем исходный текст")
             return text[:max_len]
-        # Если ответ всё равно длиннее лимита, обрезаем
+        # Если результат всё же длиннее лимита, обрезаем
         if len(shortened) > max_len:
             shortened = shortened[:max_len]
         return shortened
@@ -202,11 +218,9 @@ def main():
                 try:
                     r = requests.head(image_url, timeout=5)
                     if r.status_code == 200:
-                        # Подпись к фото до 1024 символов
                         caption = smart_truncate(full_post, 1024)
                         bot.send_photo(CHANNEL_ID, image_url, caption=caption)
                     else:
-                        # Картинка недоступна, отправляем текст
                         text_only = smart_truncate(full_post, 4000)
                         bot.send_message(CHANNEL_ID, text_only)
                 except:
