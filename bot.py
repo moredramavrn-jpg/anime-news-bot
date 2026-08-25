@@ -5,7 +5,6 @@ import telebot
 import requests
 from bs4 import BeautifulSoup
 
-# ===== НАСТРОЙКИ =====
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 
@@ -26,21 +25,16 @@ def save_posted(posted_links):
             f.write(link + '\n')
 
 def clean_html(raw_html):
-    """Удаляет HTML-теги и лишние пробелы."""
     if not raw_html:
         return ""
-    # Удаляем скрипты и стили, если вдруг остались
     soup = BeautifulSoup(raw_html, "lxml")
     for script in soup(["script", "style"]):
         script.decompose()
     text = soup.get_text(separator="\n")
-    # Убираем пустые строки и лишние пробелы
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n".join(lines)
 
 def extract_image_url(entry):
-    # ... (оставьте вашу реализацию из предыдущего кода)
-    # Для примера: если есть media_content, берём первый url
     if 'media_content' in entry:
         for media in entry.media_content:
             if 'url' in media:
@@ -49,23 +43,31 @@ def extract_image_url(entry):
         for media in entry.media_thumbnail:
             if 'url' in media:
                 return media['url']
-    # Добавьте остальные проверки, как раньше
+    if 'enclosures' in entry and entry.enclosures:
+        for enc in entry.enclosures:
+            if 'href' in enc and enc.get('type', '').startswith('image'):
+                return enc['href']
+            if 'url' in enc and enc.get('type', '').startswith('image'):
+                return enc['url']
+    summary = entry.get('summary', '') or entry.get('description', '')
+    if summary:
+        match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', summary, re.IGNORECASE)
+        if match:
+            return match.group(1)
+    content = entry.get('content', [])
+    for c in content:
+        if 'value' in c:
+            match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', c['value'], re.IGNORECASE)
+            if match:
+                return match.group(1)
     return None
 
 def fetch_full_text(entry):
-    """
-    Возвращает полный текст новости.
-    1. Пытается взять из entry.content (content:encoded в RSS).
-    2. Если нет, загружает страницу по ссылке и извлекает текст.
-    3. Иначе возвращает summary.
-    """
-    # 1. Проверяем content:encoded
     if 'content' in entry:
         content = entry.content[0].get('value', '')
         if content:
             return clean_html(content)
 
-    # 2. Загружаем страницу
     link = entry.get('link')
     if not link:
         return clean_html(entry.get('summary', '') or entry.get('description', ''))
@@ -76,27 +78,35 @@ def fetch_full_text(entry):
         r.raise_for_status()
         soup = BeautifulSoup(r.text, 'lxml')
 
-        # Пытаемся найти основной контент.
-        # На Goha.ru, скорее всего, есть <div class="news-content"> или <article>.
-        # Подберите селектор под реальную структуру (F12 в браузере).
-        content_candidates = [
-            soup.select_one('article'),
-            soup.select_one('div.news-content'),
-            soup.select_one('div.content'),
-            soup.select_one('div.news-text'),
-            soup.select_one('div.text'),
+        selectors = [
+            'article',
+            'div.news-content',
+            'div.content',
+            'div.news-text',
+            'div.text',
+            'div.post-content',
+            'div.entry-content',
+            'div.article-content',
+            'div.news-detail__text',
+            'div.b-news__text',
+            'div.js-news-text',
+            'div.article__text',
+            'div.story__text',
+            'div.text-content',
+            'div.news-item__text',
+            'div.detail__text',
+            'div.news-full__text'
         ]
         main_content = None
-        for candidate in content_candidates:
+        for selector in selectors:
+            candidate = soup.select_one(selector)
             if candidate:
                 main_content = candidate
                 break
 
-        # Если не нашли, берём самый длинный блок с текстом (эвристика)
         if not main_content:
             paragraphs = soup.find_all('p')
             if paragraphs:
-                # Ищем родителя с максимальным количеством текста
                 best_parent = None
                 best_len = 0
                 for p in paragraphs:
@@ -109,22 +119,27 @@ def fetch_full_text(entry):
                     main_content = best_parent
 
         if main_content:
-            return clean_html(str(main_content))
+            full_text = clean_html(str(main_content))
+        else:
+            full_text = clean_html(r.text)
 
-        # Если ничего не нашли, возвращаем весь текст страницы (может быть шумно)
-        return clean_html(r.text)
+        return full_text
 
     except Exception as e:
         print(f"Ошибка загрузки полного текста {link}: {e}")
         return clean_html(entry.get('summary', '') or entry.get('description', ''))
 
 def format_post(title, full_text, link):
-    """Формирует пост: заголовок + полный текст (+ ссылка по желанию)."""
     text = title.strip()
     if full_text:
+        max_len = 3800
+        if len(full_text) > max_len:
+            full_text = full_text[:max_len] + "...\n\nЧитать полностью: " + link
+        else:
+            full_text += "\n\nИсточник: " + link
         text += f"\n\n{full_text}"
-    # Ссылку можно добавить, раскомментировав следующую строку:
-    # text += f"\n\nИсточник: {link}"
+    else:
+        text += f"\n\nИсточник: {link}"
     return text
 
 def main():
@@ -144,13 +159,8 @@ def main():
             continue
 
         title = entry.get('title', 'Без названия')
-        # Получаем полный текст
         full_text = fetch_full_text(entry)
-
-        # Формируем пост
         post_text = format_post(title, full_text, link)
-
-        # Пытаемся получить картинку
         image_url = extract_image_url(entry)
 
         try:
