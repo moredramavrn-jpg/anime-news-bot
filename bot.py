@@ -4,7 +4,7 @@ import html
 import feedparser
 import telebot
 import requests
-import pymorphy2
+import pymorphy3
 from bs4 import BeautifulSoup
 from telebot import types
 
@@ -19,7 +19,7 @@ POSTED_FILE = "posted.txt"
 HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
-morph = pymorphy2.MorphAnalyzer()   # для нормализации слов
+morph = pymorphy3.MorphAnalyzer()
 
 def load_posted():
     if not os.path.exists(POSTED_FILE):
@@ -93,15 +93,12 @@ def fetch_full_text(entry):
 def extract_image_from_page(soup):
     if not soup:
         return None
-    # 1. Основной контейнер
     img_tag = soup.select_one('div.editor-body-image img')
     if img_tag and img_tag.get('src'):
         return img_tag['src']
-    # 2. Запасной контейнер
     img_tag = soup.select_one('div.editor-body img')
     if img_tag and img_tag.get('src'):
         return img_tag['src']
-    # 3. og:image
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
         return og_image['content']
@@ -116,7 +113,6 @@ def fetch_image_url(entry, soup=None):
         image = extract_image_from_page(soup)
         if image:
             return image
-    # Fallback на RSS
     image = extract_image_url_from_entry(entry)
     if image:
         return image
@@ -280,25 +276,18 @@ def format_news_body(text):
 
     paragraphs = [bold_quotes(p) for p in paragraphs]
 
-    # Курсив не добавляем
     return "\n\n".join(paragraphs)
 
 def escape_html(text):
     return html.escape(text, quote=False)
 
 def make_hashtag(text):
-    """
-    Преобразует название аниме в хэштег.
-    Слова приводятся к нормальной форме (именительный падеж, ед. число) через pymorphy2,
-    затем склеиваются символом '_' и переводятся в нижний регистр.
-    """
     words = text.strip().split()
     clean_words = []
     for w in words:
         clean_w = re.sub(r'[^\w]', '', w, flags=re.UNICODE)
         if clean_w:
             try:
-                # Берём наиболее вероятную нормальную форму
                 parsed = morph.parse(clean_w)[0]
                 normal = parsed.normal_form
             except Exception:
