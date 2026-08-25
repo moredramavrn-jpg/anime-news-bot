@@ -236,6 +236,38 @@ def smart_truncate(text, max_len):
         print("Hugging Face не справился, используем обрезание по предложениям")
         return simple_truncate_by_sentences(text, max_len)
 
+def format_news_body(text):
+    """
+    Улучшает читаемость текста:
+    - Разбивает длинные абзацы на блоки по 2-3 предложения.
+    - Убирает лишние пробелы и пустые строки.
+    - Если текст уже содержит абзацы (несколько переводов строк), оставляет как есть.
+    """
+    if not text:
+        return ""
+
+    # Если в тексте уже есть абзацы (2 и более переводов строк), не трогаем
+    if text.count('\n') >= 2:
+        return text.strip()
+
+    # Разбиваем на предложения
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    if len(sentences) <= 1:
+        return text.strip()
+
+    # Группируем по 2 предложения
+    paragraphs = []
+    current = []
+    for sent in sentences:
+        current.append(sent)
+        if len(current) == 2:
+            paragraphs.append(" ".join(current))
+            current = []
+    if current:
+        paragraphs.append(" ".join(current))
+
+    return "\n\n".join(paragraphs)
+
 def escape_html(text):
     """Экранирует специальные символы для безопасного HTML."""
     return html.escape(text, quote=False)
@@ -243,13 +275,13 @@ def escape_html(text):
 def build_post_html(title, body, video_url=None, is_youtube=False):
     """Собирает красиво отформатированный HTML-текст поста."""
     title_esc = escape_html(title)
-    body_esc = escape_html(body) if body else ""
+    body_formatted = format_news_body(body) if body else ""
 
     parts = [f"<b>{title_esc}</b>"]
 
-    if body_esc:
+    if body_formatted:
         parts.append("──────────")
-        parts.append(body_esc)
+        parts.append(body_formatted)
 
     if video_url and is_youtube:
         parts.append("")
@@ -259,13 +291,10 @@ def build_post_html(title, body, video_url=None, is_youtube=False):
 
 def send_post(title, body, image_url, video_url, is_youtube):
     """Отправляет пост в канал с учётом всех элементов."""
-    # Для подписи к фото/видео лимит 1024 символа, для обычного сообщения 4096.
     if image_url:
-        # Пытаемся отправить фото с подписью
         body_for_caption = smart_truncate(body, 900) if body else ""
         caption = build_post_html(title, body_for_caption, video_url, is_youtube)
         try:
-            # Проверяем доступность фото
             r = requests.head(image_url, timeout=5)
             if r.status_code == 200:
                 bot.send_photo(CHANNEL_ID, image_url, caption=caption, parse_mode='HTML')
@@ -274,7 +303,6 @@ def send_post(title, body, image_url, video_url, is_youtube):
             print(f"Не удалось отправить фото: {e}")
 
     if video_url and not is_youtube:
-        # Прямое видео
         body_for_caption = smart_truncate(body, 900) if body else ""
         caption = build_post_html(title, body_for_caption)
         try:
@@ -283,7 +311,7 @@ def send_post(title, body, image_url, video_url, is_youtube):
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
 
-    # Если фото/видео не отправлены, отправляем обычное сообщение
+    # Обычное сообщение
     body_for_message = smart_truncate(body, 3500) if body else ""
     message = build_post_html(title, body_for_message, video_url, is_youtube)
     bot.send_message(CHANNEL_ID, message, parse_mode='HTML')
