@@ -197,19 +197,19 @@ def extract_video_url_from_page(soup):
     if not soup:
         return None, False
 
-    # Goha.ru: editor-body-youtube
+    # 1. Goha.ru: editor-body-youtube
     yt_tag = soup.select_one('editor-body-youtube')
     if yt_tag and yt_tag.get('url'):
         url = yt_tag['url']
         if is_youtube_video(url):
             return url, True
 
-    # YouTube iframe (embed)
+    # 2. YouTube iframe (embed)
     iframe = soup.select_one('iframe[src*="youtube.com/embed"], iframe[src*="youtu.be/"]')
     if iframe and iframe.get('src'):
         return iframe['src'], True
 
-    # Прямое видео (video тег)
+    # 3. Прямой video тег
     video_tag = soup.select_one('video')
     if video_tag:
         src = video_tag.get('src')
@@ -219,16 +219,33 @@ def extract_video_url_from_page(soup):
         if source_tag and source_tag.get('src'):
             return source_tag['src'], False
 
-    # og:video
+    # 4. og:video
     og_video = soup.select_one('meta[property="og:video"]')
     if og_video and og_video.get('content'):
         url = og_video['content']
         if is_youtube_video(url):
             return url, True
-        # если это не youtube, значит прямой файл
         return url, False
 
-    # Явно не ищем произвольные ссылки на YouTube, чтобы не цеплять каналы
+    # 5. КГ-Портал: ссылки с классом "youtube"
+    for a in soup.select('a.youtube'):
+        href = a.get('href', '')
+        # Извлекаем URL из параметра url=...
+        match = re.search(r'url=([^&]+)', href)
+        if match:
+            url = html.unescape(match.group(1))
+            if is_youtube_video(url):
+                return url, True
+
+    # 6. Поиск видеофайлов в скриптах (mp4/webm)
+    scripts = soup.find_all('script')
+    script_text = ' '.join(s.get_text() for s in scripts)
+    # Ищем упоминания sources: или vodQualities и извлекаем URL с расширением видео
+    pattern = r'(?:sources|vodQualities)[^{]*?["\']src["\']\s*:\s*["\']([^"\']+\.(?:mp4|webm))'
+    match = re.search(pattern, script_text, re.IGNORECASE)
+    if match:
+        return html.unescape(match.group(1)), False
+
     return None, False
 
 def fetch_video_info(entry, soup=None):
