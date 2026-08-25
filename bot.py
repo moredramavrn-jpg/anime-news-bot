@@ -91,17 +91,22 @@ def fetch_full_text(entry):
 def extract_image_from_page(soup):
     if not soup:
         return None
+    # 1. Основной контейнер
     img_tag = soup.select_one('div.editor-body-image img')
-    if not img_tag:
-        img_tag = soup.select_one('div.editor-body img')
     if img_tag and img_tag.get('src'):
         return img_tag['src']
+    # 2. Запасной контейнер
+    img_tag = soup.select_one('div.editor-body img')
+    if img_tag and img_tag.get('src'):
+        return img_tag['src']
+    # 3. og:image
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
         return og_image['content']
     return None
 
 def fetch_image_url(entry, soup=None):
+    """Получает URL картинки. Сначала из soup, затем из RSS."""
     if soup is None:
         link = entry.get('link')
         if link:
@@ -110,7 +115,12 @@ def fetch_image_url(entry, soup=None):
         image = extract_image_from_page(soup)
         if image:
             return image
-    return extract_image_url_from_entry(entry)
+    # Fallback на RSS
+    image = extract_image_url_from_entry(entry)
+    if image:
+        return image
+    print(f"Картинка не найдена для {entry.get('link', '')}")
+    return None
 
 def extract_image_url_from_entry(entry):
     if 'media_content' in entry:
@@ -196,6 +206,7 @@ def simple_truncate_by_sentences(text, max_len):
     return result
 
 def call_hf_api(prompt):
+    """Отправляет запрос в Hugging Face Inference API."""
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}",
         "Content-Type": "application/json"
@@ -223,8 +234,10 @@ def call_hf_api(prompt):
         return None
 
 def smart_truncate(text, max_len):
+    """Сокращает текст через Hugging Face, если он длиннее max_len. Иначе возвращает как есть."""
     if len(text) <= max_len:
         return text
+
     prompt = f"""Напиши краткий пересказ следующей новости на русском языке. Объём пересказа должен быть не более {max_len} символов. Сохрани все важные факты, имена, названия. Не добавляй ничего от себя.
 
 Новость:
@@ -232,6 +245,7 @@ def smart_truncate(text, max_len):
 """
     shortened = call_hf_api(prompt)
     if shortened and len(shortened) >= 50:
+        # Если модель вернула слишком длинный ответ, обрежем по предложениям
         if len(shortened) > max_len:
             shortened = simple_truncate_by_sentences(shortened, max_len)
         return shortened
@@ -297,7 +311,6 @@ def extract_title_hashtag(title):
     return None
 
 def build_post_html(title, body, emoji='📄'):
-    """Собирает HTML-текст поста с эмодзи и хэштегами."""
     title_esc = escape_html(title)
     body_formatted = format_news_body(body) if body else ""
 
