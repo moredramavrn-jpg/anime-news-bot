@@ -35,7 +35,6 @@ def clean_html(raw_html):
     return "\n".join(lines)
 
 def get_page_soup(url):
-    """Загружает страницу и возвращает объект BeautifulSoup."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -51,7 +50,6 @@ def get_page_soup(url):
         return None
 
 def extract_full_text_from_page(soup):
-    """Извлекает полный текст новости из страницы."""
     if not soup:
         return ""
     main_content = soup.select_one('div.editor-body')
@@ -82,7 +80,6 @@ def extract_full_text_from_page(soup):
     return ""
 
 def extract_image_from_page(soup):
-    """Извлекает URL изображения из страницы новости."""
     if not soup:
         return None
     img_tag = soup.select_one('div.editor-body-image img')
@@ -96,7 +93,6 @@ def extract_image_from_page(soup):
     return None
 
 def fetch_full_text(entry):
-    """Получает полный текст новости (сначала страница, потом RSS)."""
     link = entry.get('link')
     if link:
         soup = get_page_soup(link)
@@ -110,7 +106,6 @@ def fetch_full_text(entry):
     return ""
 
 def fetch_image_url(entry):
-    """Получает URL изображения (сначала страница, потом RSS)."""
     link = entry.get('link')
     if link:
         soup = get_page_soup(link)
@@ -148,16 +143,24 @@ def extract_image_url_from_entry(entry):
                 return match.group(1)
     return None
 
-def format_post(title, full_text, link):
-    """Формирует пост. Ссылка добавляется только при обрезке."""
+def format_post(title, full_text, link, max_len):
+    """Формирует пост, обрезая при необходимости и добавляя ссылку, если текст был обрезан."""
     text = title.strip()
     if full_text:
-        max_len = 3500
-        if len(full_text) > max_len:
-            full_text = full_text[:max_len] + "...\n\nЧитать полностью: " + link
-        # иначе ссылку не добавляем
-        text += f"\n\n{full_text}"
-    # если full_text пуст, оставляем только заголовок
+        # Вычисляем доступное место для текста с учётом заголовка и возможной ссылки
+        link_part = "...\n\nЧитать полностью: " + link
+        available = max_len - len(text) - len("\n\n") - len(link_part)
+        if available > 0:
+            if len(full_text) <= available:
+                text += "\n\n" + full_text
+            else:
+                text += "\n\n" + full_text[:available] + link_part
+        else:
+            # Заголовок сам слишком длинный, обрезаем его
+            max_title_len = max_len - len(link_part)
+            if max_title_len > 0:
+                text = title[:max_title_len] + link_part
+    # Если full_text пустой, оставляем только заголовок (возможно, стоит добавить ссылку? нет)
     return text
 
 def main():
@@ -180,25 +183,25 @@ def main():
         full_text = fetch_full_text(entry)
         image_url = fetch_image_url(entry)
 
-        post_text = format_post(title, full_text, link)
-
         try:
             if image_url:
-                # Проверяем доступность картинки (не обязательно, но желательно)
+                # Проверяем доступность картинки
                 try:
                     r = requests.head(image_url, timeout=5)
                     if r.status_code == 200:
-                        if len(post_text) <= 1024:
-                            bot.send_photo(CHANNEL_ID, image_url, caption=post_text)
-                        else:
-                            bot.send_photo(CHANNEL_ID, image_url)
-                            bot.send_message(CHANNEL_ID, post_text)
+                        # Для подписи к фото лимит 1024 символа
+                        caption = format_post(title, full_text, link, max_len=1000)
+                        bot.send_photo(CHANNEL_ID, image_url, caption=caption)
                     else:
-                        bot.send_message(CHANNEL_ID, post_text)
+                        # Если картинка недоступна, шлём просто текст
+                        text_only = format_post(title, full_text, link, max_len=4000)
+                        bot.send_message(CHANNEL_ID, text_only)
                 except:
-                    bot.send_message(CHANNEL_ID, post_text)
+                    text_only = format_post(title, full_text, link, max_len=4000)
+                    bot.send_message(CHANNEL_ID, text_only)
             else:
-                bot.send_message(CHANNEL_ID, post_text)
+                text_only = format_post(title, full_text, link, max_len=4000)
+                bot.send_message(CHANNEL_ID, text_only)
 
             posted_links.add(link)
             new_posts += 1
