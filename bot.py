@@ -27,6 +27,8 @@ RSS_URLS = [
     "https://kg-portal.ru/rss/news_anime.rss"
 ]
 
+SHIKIMORI_MAIN = "https://shikimori.io/"
+
 POSTED_FILE = "posted.txt"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
@@ -105,13 +107,56 @@ def get_page_soup(url):
         print(f"Ошибка загрузки {url}: {e}")
         return None
 
+def extract_russian_anime_names(soup):
+    """
+    Извлекает все пары английское-русское название со страницы новости Shikimori.
+    Возвращает словарь {английское: русское}.
+    """
+    pairs = {}
+    if not soup:
+        return pairs
+
+    for name_en in soup.select('span.name-en'):
+        parent = name_en.find_parent()
+        if parent:
+            name_ru = parent.select_one('span.name-ru')
+            if name_ru:
+                en = name_en.get_text(strip=True)
+                ru = name_ru.get_text(strip=True)
+                if en and ru:
+                    pairs[en] = ru
+    return pairs
+
+def replace_anime_names(text, name_pairs):
+    """
+    Заменяет в тексте английские названия на русские (по словарю).
+    """
+    if not text or not name_pairs:
+        return text
+    for en, ru in name_pairs.items():
+        text = text.replace(en, ru)
+        text = text.replace(f'«{en}»', f'«{ru}»')
+        text = text.replace(f'"{en}"', f'«{ru}»')
+    return text
+
 def extract_full_text_from_page(soup):
     if not soup:
         return ""
 
+    for bad_selector in [
+        'div.b-comments', 'div.comments', 'div.b-comment', 'div.comment',
+        'div.b-toolbar', 'div.toolbar', 'footer', 'header',
+        'div.b-comments__content', 'div.comments__content'
+    ]:
+        for elem in soup.select(bad_selector):
+            elem.decompose()
+
     main_content = soup.select_one('div.editor-body')  # Goha.ru
     if not main_content:
         main_content = soup.select_one('div.news_text')  # КГ-Портал
+
+    if not main_content:
+        main_content = soup.select_one('div.body-inner')  # Shikimori
 
     if not main_content:
         selectors = [
@@ -131,19 +176,32 @@ def extract_full_text_from_page(soup):
     return ""
 
 def fetch_full_text(entry):
-    link = entry.get('link')
+    link = entry.get('link', '')
+
+    if 'shikimori' in link:
+        soup = get_page_soup(link)
+        if soup:
+            body_inner = soup.select_one('div.body-inner')
+            if body_inner:
+                full_text = clean_html(str(body_inner))
+                if full_text:
+                    return full_text[:2000]
+        summary = entry.get('summary', '') or entry.get('description', '')
+        if summary:
+            return clean_html(summary)
+        return ""
+
     if link:
         soup = get_page_soup(link)
         if soup:
             full_text = extract_full_text_from_page(soup)
             if full_text:
-                return full_text
+                return full_text[:2000]
     summary = entry.get('summary', '') or entry.get('description', '')
     if summary:
         return clean_html(summary)
     return ""
 
-# ---------- Изображения ----------
 def extract_image_from_page(soup, page_url=None):
     if not soup:
         return None
@@ -154,6 +212,8 @@ def extract_image_from_page(soup, page_url=None):
         'div.news_box img', 'article img', 'div.news_image img',
         'div.article_image img', 'div.full_news img',
         'div.news_content img', 'div.news-full__text img',
+        'div.b-shiki_editor img', 'div.shiki_editor img',
+        'div.b-shiki_wall img'
     ]
 
     for selector in selectors:
@@ -162,25 +222,17 @@ def extract_image_from_page(soup, page_url=None):
             src = (img_tag.get('src') or img_tag.get('data-src') or
                    img_tag.get('data-original') or img_tag.get('data-lazy-src'))
             if src:
-                return make_absolute(src, page_url or 'https://kg-portal.ru')
-
-    news_text = soup.select_one('div.news_text')
-    if news_text:
-        for img in news_text.find_all('img'):
-            src = (img.get('src') or img.get('data-src') or
-                   img.get('data-original') or img.get('data-lazy-src'))
-            if src:
-                return make_absolute(src, page_url or 'https://kg-portal.ru')
+                return make_absolute(src, page_url or 'https://shikimori.one')
 
     og_image = soup.select_one('meta[property="og:image"]')
     if og_image and og_image.get('content'):
-        return make_absolute(og_image['content'], page_url or 'https://kg-portal.ru')
+        return make_absolute(og_image['content'], page_url or 'https://shikimori.one')
 
     for img in soup.find_all('img'):
         src = (img.get('src') or img.get('data-src') or
                img.get('data-original') or img.get('data-lazy-src'))
         if src and re.search(r'\.(jpg|jpeg|png|webp)(\?.*)?$', src, re.IGNORECASE):
-            return make_absolute(src, page_url or 'https://kg-portal.ru')
+            return make_absolute(src, page_url or 'https://shikimori.one')
 
     return None
 
@@ -207,6 +259,8 @@ def extract_image_url_from_entry(entry):
         link = entry.get('link', '')
         if 'kg-portal.ru' in link:
             base_domain = 'https://kg-portal.ru'
+        elif 'shikimori.one' in link:
+            base_domain = 'https://shikimori.one'
 
     if 'media_content' in entry:
         for media in entry.media_content:
@@ -237,7 +291,12 @@ def extract_image_url_from_entry(entry):
 
 # ---------- Видео ----------
 def is_youtube_video(url):
-    return ('youtube.com/watch' in url) or ('youtu.be/' in url)
+    return (
+        'youtube.com/watch' in url or
+        'youtu.be/' in url or
+        'youtube.com/embed/' in url or
+        'youtube-nocookie.com/embed/' in url
+    )
 
 def to_short_youtube_url(url):
     decoded_url = unquote(url)
@@ -248,6 +307,10 @@ def to_short_youtube_url(url):
             video_id = match.group(1)
     elif 'youtu.be/' in decoded_url:
         match = re.search(r'youtu\.be/([^?&]+)', decoded_url)
+        if match:
+            video_id = match.group(1)
+    elif 'youtube.com/embed/' in decoded_url:
+        match = re.search(r'youtube\.com/embed/([^?&]+)', decoded_url)
         if match:
             video_id = match.group(1)
     if video_id:
@@ -287,6 +350,13 @@ def extract_video_url_from_page(soup):
         url = og_video['content']
         if is_youtube_video(url):
             return url, True
+
+    for a in soup.select('div.b-video.youtube a.video-link, a.video-link[data-href*="youtube"], a.video-link[href*="youtube"]'):
+        data_href = a.get('data-href') or a.get('href')
+        if data_href:
+            url = html.unescape(data_href)
+            if is_youtube_video(url):
+                return url, True
 
     for a in soup.select('a.youtube'):
         href = a.get('href', '')
@@ -373,7 +443,6 @@ def strip_html_tags(text):
     return re.sub(r'<[^>]+>', '', text)
 
 def fix_quotes(text):
-    # Замена прямых кавычек на ёлочки
     result = []
     open_quote = False
     for ch in text:
@@ -386,26 +455,20 @@ def fix_quotes(text):
                 open_quote = False
         else:
             result.append(ch)
-    # Заменяем „...“ на «...»
     text = ''.join(result)
     text = text.replace('„', '«').replace('“', '»')
     return text
 
 def fix_punctuation_spaces(text):
-    # Убираем пробел перед знаками препинания
     text = re.sub(r'\s+([.,!?;:])', r'\1', text)
-    # Убираем пробел после открывающей кавычки
     text = re.sub(r'(«)\s+', r'\1', text)
-    # Убираем пробел перед закрывающей кавычкой
     text = re.sub(r'\s+(»)', r'\1', text)
     return text
 
 def remove_garbage_lines(text):
-    """Удаляет строки, которые выглядят как рассуждения или вопросы."""
     lines = text.split('\n')
     cleaned = []
     for line in lines:
-        # Если строка содержит риторический вопрос или начинается с сомнительных слов – пропускаем
         if re.search(r'\?\s*$', line):
             continue
         if re.match(r'^(Что за|Впрочем|Но и|Как думаете|Кстати|Наверное|Возможно)', line, re.IGNORECASE):
@@ -530,24 +593,51 @@ def get_gigachat_token():
         print(f"Ошибка получения токена GigaChat: {e}")
         return None
 
+def remove_duplicate_start(title, body):
+    """
+    Убирает дублирование заголовка в начале текста.
+    """
+    if not title or not body:
+        return body
+    title_clean = re.sub(r'<[^>]+>', '', title).strip().strip('«»').strip()
+    body_clean = re.sub(r'<[^>]+>', '', body).strip()
+    if body_clean.lower().startswith(title_clean.lower()):
+        body_clean = body_clean[len(title_clean):].lstrip('.,;:!? ')
+        if not body_clean:
+            return ""
+    sentences = re.split(r'(?<=[.!?])\s+', body_clean)
+    if sentences and title_clean.lower() in sentences[0].lower():
+        body_clean = ' '.join(sentences[1:]).strip()
+    return body_clean
+
+def make_title_from_text(text):
+    """
+    Создаёт заголовок из первого предложения текста.
+    """
+    if not text:
+        return "", ""
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    if not sentences:
+        return text, ""
+    first = sentences[0].strip()
+    rest = ' '.join(sentences[1:]).strip()
+    return first, rest
+
 def rewrite_news(title, body):
     if not GIGACHAT_AUTHORIZATION_KEY:
-        print("GigaChat: нет ключа авторизации")
         return title, body
 
     token = get_gigachat_token()
     if not token:
-        print("GigaChat: не удалось получить токен")
         return title, body
 
-    body_part = body[:3000]
+    body_part = body[:2000]
 
-    prompt = f"""Перепиши следующие заголовок и текст новости так, чтобы они стали уникальными, но сохранили все ключевые факты, имена, названия.
-Постарайся сохранить объём примерно 1500 символов. Не упускай важные детали.
-Разбей текст на логические абзацы, каждый абзац должен содержать ровно 2 предложения.
-Избегай дословного копирования. Используй стандартные кавычки «» и не ставь лишние пробелы.
-Не задавай вопросов, не пиши комментарии от себя, не используй вводные слова-рассуждения.
-Пиши на русском языке.
+    prompt = f"""Перефразируй следующий текст новости, сохраняя все факты, названия и имена.
+Не увеличивай объём: если текст короткий, оставь его коротким. Если текст длинный, можешь оставить его примерно той же длины, но не более 2000 символов.
+Не добавляй домыслы и не придумывай подробности.
+Разбей на абзацы по 2 предложения (если возможно). Используй кавычки «».
+Не задавай вопросов, не пиши от себя.
 
 Заголовок: {title}
 
@@ -573,7 +663,7 @@ def rewrite_news(title, body):
                     {"role": "system", "content": "Ты — редактор аниме-новостей."},
                     {"role": "user", "content": prompt}
                 ],
-                "temperature": 0.7,
+                "temperature": 0.4,
                 "max_tokens": 1200
             },
             timeout=30,
@@ -592,7 +682,6 @@ def rewrite_news(title, body):
             elif line.startswith('Текст:'):
                 new_body = line.replace('Текст:', '').strip()
 
-        # Финальная очистка
         new_title = fix_quotes(new_title)
         new_title = fix_punctuation_spaces(new_title)
         new_body = clean_and_paragraph(new_body)
@@ -600,11 +689,12 @@ def rewrite_news(title, body):
         new_body = fix_punctuation_spaces(new_body)
         new_body = remove_garbage_lines(new_body)
 
+        new_body = remove_duplicate_start(new_title, new_body)
+
         if new_title and new_body:
             print(f"GigaChat вернул новый заголовок: {new_title[:50]}...")
             return new_title, new_body
         else:
-            print("GigaChat: не удалось распознать результат")
             return title, body
     except Exception as e:
         print(f"Ошибка при рерайте через GigaChat: {e}")
@@ -705,9 +795,90 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
 
     bot.send_message(CHANNEL_ID, full_message, parse_mode='HTML', disable_web_page_preview=True)
 
+def fetch_shikimori_news_from_main_page():
+    soup = get_page_soup(SHIKIMORI_MAIN)
+    if not soup:
+        return []
+
+    news_items = []
+    seen_links = set()
+
+    latest = soup.select_one('div.news_wall.latest-news')
+    if latest:
+        for article in latest.select('article.b-news_wall-topic'):
+            link = article.select_one('a[href*="/forum/news/"]')
+            if link:
+                href = urljoin(SHIKIMORI_MAIN, link.get('href', ''))
+                title = article.select_one('div.title')
+                title_text = title.get_text(strip=True) if title else "Без названия"
+                img_tag = article.select_one('img')
+                image_url = None
+                if img_tag:
+                    src = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-original')
+                    if src:
+                        image_url = make_absolute(src, SHIKIMORI_MAIN)
+                if href not in seen_links:
+                    news_items.append({'title': title_text, 'link': href, 'image_url': image_url})
+                    seen_links.add(href)
+
+    other = soup.select_one('div.news_wall.other-news')
+    if other:
+        for article in other.select('article.b-news_wall-topic'):
+            link = article.select_one('a[href*="/forum/news/"]')
+            if link:
+                href = urljoin(SHIKIMORI_MAIN, link.get('href', ''))
+                title = article.select_one('div.title')
+                title_text = title.get_text(strip=True) if title else "Без названия"
+                img_tag = article.select_one('img')
+                image_url = None
+                if img_tag:
+                    src = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-original')
+                    if src:
+                        image_url = make_absolute(src, SHIKIMORI_MAIN)
+                if href not in seen_links:
+                    news_items.append({'title': title_text, 'link': href, 'image_url': image_url})
+                    seen_links.add(href)
+
+    return news_items
+
 def main():
     links, titles = load_posted()
     new_posts = 0
+
+    print("Обрабатываю новости Shikimori с главной страницы...")
+    shikimori_news = fetch_shikimori_news_from_main_page()
+    for news in shikimori_news:
+        link = news['link']
+        title = news['title']
+        if is_duplicate(link, title, links, titles):
+            print(f"Дубликат пропущен: {title}")
+            continue
+
+        soup = get_page_soup(link)
+        full_text = fetch_full_text({'link': link, 'title': title})
+        image_url = news.get('image_url')
+        video_url, is_youtube = fetch_video_info({'link': link}, soup)
+
+        name_pairs = extract_russian_anime_names(soup)
+        if name_pairs:
+            title = replace_anime_names(title, name_pairs)
+            full_text = replace_anime_names(full_text, name_pairs)
+
+        # Для Shikimori: делаем заголовок из первого предложения текста
+        if full_text:
+            new_title, new_body = make_title_from_text(full_text)
+            if new_title:
+                title = new_title
+                full_text = new_body
+
+        try:
+            send_post(title, full_text, link, image_url, video_url, is_youtube)
+            links.add(link)
+            titles.add(normalize_title(title))
+            new_posts += 1
+            print(f"Опубликовано: {title}")
+        except Exception as e:
+            print(f"Ошибка отправки для {link}: {e}")
 
     for rss_url in RSS_URLS:
         print(f"Обрабатываю ленту: {rss_url}")
@@ -729,7 +900,7 @@ def main():
                 continue
 
             soup = get_page_soup(link) if link else None
-            full_text = extract_full_text_from_page(soup) if soup else fetch_full_text(entry)
+            full_text = fetch_full_text(entry)
             image_url = fetch_image_url(entry, soup)
             video_url, is_youtube = fetch_video_info(entry, soup)
 
