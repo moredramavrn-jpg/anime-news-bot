@@ -19,7 +19,7 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 gigachat_access_token = None
 gigachat_token_expires_at = 0
 
-# Контент-план по дням недели (0 = понедельник, 6 = воскресенье)
+# Контент-план по дням недели
 CONTENT_PLAN = {
     0: "🎯 Топ-5 аниме, которые стоит посмотреть на этой неделе",
     1: "📝 Совет: как выбрать аниме под настроение",
@@ -29,6 +29,9 @@ CONTENT_PLAN = {
     5: "💬 Мнение: почему классика аниме не устаревает",
     6: "📅 Ожидания: анонсы и премьеры следующей недели",
 }
+
+# Эмодзи для украшения текста
+EMOJI_POOL = ["🌸", "⚡", "🔥", "💥", "🌟", "🎬", "🍥", "🗡️", "✨", "💫"]
 
 def get_gigachat_token():
     global gigachat_access_token, gigachat_token_expires_at
@@ -59,24 +62,50 @@ def get_gigachat_token():
         print(f"Ошибка получения токена GigaChat: {e}")
         return None
 
+def clean_generated_text(text):
+    """Убирает вопросительные предложения."""
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    cleaned = []
+    for sent in sentences:
+        if sent.strip().endswith('?'):
+            continue
+        cleaned.append(sent)
+    return ' '.join(cleaned)
+
+def add_emoji_to_text(text):
+    """Добавляет случайный эмодзи в начало каждого абзаца."""
+    paragraphs = text.split('\n\n')
+    decorated = []
+    for para in paragraphs:
+        emoji = EMOJI_POOL[len(decorated) % len(EMOJI_POOL)]
+        decorated.append(f"{emoji} {para.strip()}")
+    return '\n\n'.join(decorated)
+
+def has_anime_titles(text):
+    """Проверяет, есть ли в тексте названия в кавычках."""
+    return bool(re.search(r'«[^»]+»|"[^"]+"', text))
+
 def generate_content():
-    """Генерирует пост на основе дня недели."""
     token = get_gigachat_token()
     if not token:
         print("Не удалось получить токен GigaChat")
         return None
 
-    # Определяем тему по текущему дню недели
     weekday = datetime.utcnow().weekday()
     topic = CONTENT_PLAN.get(weekday, "🎯 Подборка аниме")
 
-    prompt = f"""Составь интересный пост для Telegram-канала об аниме на тему: "{topic}".
-Пост должен быть:
-- Уникальным, без дословного копирования из интернета.
-- Разбит на 2-3 абзаца, каждый по 2-3 предложения.
-- Написан живым, дружелюбным языком.
-- В конце добавь хэштеги #аниме #новости #подборка (или соответствующие теме).
-- Не используй вводные слова-рассуждения и вопросы.
+    prompt = f"""Составь пост для Telegram-канала об аниме на тему: "{topic}".
+
+Обязательные требования:
+- Приведи конкретные названия аниме (минимум 3), желательно в кавычках «».
+- Укажи жанры, студии, годы выхода, если уместно.
+- Текст должен быть полезным, информативным, без воды.
+- Запрещено задавать вопросы читателю.
+- Запрещены фразы "И что это...", "Как думаете...", "Непонятно...", "Впрочем...".
+- Разбей текст на 3-4 абзаца, каждый по 2-3 предложения.
+- Добавь в начало каждого абзаца подходящий эмодзи.
+- Напиши на русском языке.
+
 Выведи результат строго в формате:
 Заголовок: <заголовок поста>
 Текст: <текст поста>
@@ -94,11 +123,11 @@ def generate_content():
             json={
                 "model": "GigaChat-3-Ultra",
                 "messages": [
-                    {"role": "system", "content": "Ты — креативный редактор аниме-канала."},
+                    {"role": "system", "content": "Ты — опытный редактор аниме-канала. Ты всегда пишешь конкретно, с эмодзи, без риторических вопросов."},
                     {"role": "user", "content": prompt}
                 ],
-                "temperature": 0.8,
-                "max_tokens": 800
+                "temperature": 0.7,
+                "max_tokens": 1000
             },
             timeout=30,
             verify=False
@@ -117,6 +146,14 @@ def generate_content():
                 body = line.replace('Текст:', '').strip()
 
         if title and body:
+            body = clean_generated_text(body)
+            # Проверяем наличие названий
+            if not has_anime_titles(body):
+                print("В сгенерированном тексте нет конкретных названий, пробуем ещё раз")
+                return None
+            # Добавляем эмодзи в начало абзацев, если их ещё нет
+            if not re.search(r'[🎯📝🏆🎲🔮💬📅]', body):
+                body = add_emoji_to_text(body)
             return title, body
         else:
             print("Не удалось распознать результат GigaChat")
@@ -126,7 +163,6 @@ def generate_content():
         return None
 
 def send_content_post(title, body):
-    """Форматирует и отправляет пост в канал."""
     message = f"✨ <b>{html.escape(title)}</b>\n\n{body}\n\n#аниме #новости"
     try:
         bot.send_message(CHANNEL_ID, message, parse_mode='HTML', disable_web_page_preview=True)
