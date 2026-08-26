@@ -82,14 +82,34 @@ def parse_generated_text(raw_text):
 
     return title, body
 
+def split_rating_items(text):
+    pattern = r'(?=(?:🥇|🥈|🥉|\d+\.)\s)'
+    parts = re.split(pattern, text)
+    parts = [p.strip() for p in parts if p.strip()]
+    return '\n'.join(parts)
+
+def remove_dangling_numbers(text):
+    """
+    Удаляет строки, состоящие только из номера с точкой (например, "4." или "5."),
+    если они случайно оказались отдельно.
+    """
+    lines = text.split('\n')
+    cleaned = []
+    for line in lines:
+        if re.fullmatch(r'\d+\.\s*', line.strip()):
+            continue
+        cleaned.append(line)
+    return '\n'.join(cleaned)
+
 def normalize_rating_text(text):
-    """Исправляет разрывы строк в рейтинге: '4. ... 5.' объединяются."""
+    text = split_rating_items(text)
+    text = remove_dangling_numbers(text)
     lines = text.split('\n')
     fixed = []
     i = 0
     while i < len(lines):
         line = lines[i].strip()
-        # Если строка заканчивается номером с точкой и следующая существует
+        # Если строка заканчивается "4." или "5." и есть следующая строка, объединяем
         if re.search(r'\d+\.\s*$', line) and i + 1 < len(lines):
             combined = line + ' ' + lines[i+1].strip()
             fixed.append(combined)
@@ -100,20 +120,14 @@ def normalize_rating_text(text):
     return '\n'.join(fixed)
 
 def wrap_titles_in_quotes(text):
-    """
-    Если после медали/номера идёт название без кавычек до тире,
-    оборачиваем его в «».
-    """
     lines = text.split('\n')
     wrapped = []
     for line in lines:
-        # Паттерн: (🥇|🥈|🥉|4.|5.) Название — описание
         m = re.match(r'^((?:🥇|🥈|🥉|\d+\.)\s*)([^—]+)(—.*)?$', line)
         if m:
             prefix = m.group(1)
             title_part = m.group(2).strip()
             rest = m.group(3) or ""
-            # Если название уже в кавычках, не трогаем
             if not (title_part.startswith('«') and title_part.endswith('»')):
                 title_part = f"«{title_part}»"
             wrapped.append(f"{prefix}{title_part} {rest}".strip())
@@ -122,10 +136,8 @@ def wrap_titles_in_quotes(text):
     return '\n'.join(wrapped)
 
 def has_anime_titles(text):
-    """Проверяет, есть ли в тексте названия в кавычках или структура рейтинга."""
     if re.search(r'«[^»]+»|"[^"]+"', text):
         return True
-    # Альтернативная проверка: есть строки вида "🥇 Название — описание"
     if re.search(r'(?:🥇|🥈|🥉|\d+\.)\s*.+?—', text):
         return True
     return False
@@ -171,14 +183,15 @@ def generate_content():
     if "Рейтинг" in topic:
         system_msg = "Ты — редактор аниме-канала. Ты составляешь рейтинги только из реально существующих аниме."
         prompt = f"""Составь рейтинг из 5 популярных аниме, которые действительно существуют и широко известны.
-Формат строго:
-🥇 «Название аниме» — краткое описание (1-2 предложения).
-🥈 «Название аниме» — краткое описание.
-🥉 «Название аниме» — краткое описание.
-4. «Название аниме» — краткое описание.
-5. «Название аниме» — краткое описание.
 
-Каждый пункт должен быть отдельным абзацем.
+Формат строго:
+🥇 «Название аниме» — описание из 2-3 предложений: сюжет, особенности, почему стоит смотреть.
+🥈 «Название аниме» — описание из 2-3 предложений.
+🥉 «Название аниме» — описание из 2-3 предложений.
+4. «Название аниме» — описание из 2-3 предложений.
+5. «Название аниме» — описание из 2-3 предложений.
+
+Каждый пункт рейтинга обязательно с новой строки.
 Названия аниме обязательно заключай в кавычки «».
 Не выдумывай названия. Используй только реальные аниме.
 Не добавляй лишних эмодзи, кроме медалей и номеров.
@@ -209,7 +222,6 @@ def generate_content():
 Заголовок: <заголовок поста>
 Текст: <текст поста>
 """
-
     try:
         response = requests.post(
             "https://api.giga.chat/v1/chat/completions",
@@ -248,7 +260,6 @@ def generate_content():
 
         if "Рейтинг" in title:
             body = normalize_rating_text(body)
-            # Оборачиваем названия в кавычки, если они отсутствуют
             if not re.search(r'«[^»]+»|"[^"]+"', body):
                 body = wrap_titles_in_quotes(body)
         else:
