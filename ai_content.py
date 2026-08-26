@@ -62,11 +62,6 @@ def get_gigachat_token():
         return None
 
 def parse_generated_text(raw_text):
-    """
-    Пытается извлечь заголовок и текст из ответа модели.
-    Если формат не соблюдён, использует эвристику:
-    заголовок = первая строка, текст = остальное.
-    """
     lines = raw_text.strip().split('\n')
     title = None
     body_lines = []
@@ -76,38 +71,49 @@ def parse_generated_text(raw_text):
             title = line.replace('Заголовок:', '').strip()
         elif line.startswith('Текст:'):
             body_lines.append(line.replace('Текст:', '').strip())
-        elif not title and not body_lines:
-            # Если первые строки не соответствуют формату, считаем первую строку заголовком
-            if len(line.strip()) > 3 and not line.startswith('Текст'):
-                title = line.strip()
-                continue
+        elif not title and not body_lines and len(line.strip()) > 3:
+            title = line.strip()
         else:
             body_lines.append(line.strip())
 
     body = '\n'.join([l for l in body_lines if l]).strip()
-
-    # Если заголовок не найден, но есть текст – берём первую строку как заголовок
     if not title and body_lines:
         title = body_lines[0]
         body = '\n'.join(body_lines[1:]).strip()
 
     return title, body
 
-def clean_generated_text(text):
+def split_into_paragraphs(text, sentences_per_par=2):
+    """Разбивает текст на абзацы по 2 предложения."""
+    # Убираем множественные пробелы и переносы, чтобы было чисто
+    text = re.sub(r'\s*\n\s*', ' ', text).strip()
     sentences = re.split(r'(?<=[.!?])\s+', text)
-    cleaned = []
-    for sent in sentences:
-        if sent.strip().endswith('?'):
-            continue
-        cleaned.append(sent)
-    return ' '.join(cleaned)
+    if len(sentences) <= sentences_per_par:
+        return text
 
-def add_emoji_to_text(text):
+    paragraphs = []
+    current = []
+    for sent in sentences:
+        current.append(sent)
+        if len(current) == sentences_per_par:
+            paragraphs.append(" ".join(current))
+            current = []
+    if current:
+        paragraphs.append(" ".join(current))
+
+    return '\n\n'.join(paragraphs)
+
+def add_emoji_to_paragraphs(text):
+    """Добавляет эмодзи в начало каждого абзаца."""
     paragraphs = text.split('\n\n')
     decorated = []
     for i, para in enumerate(paragraphs):
         emoji = EMOJI_POOL[i % len(EMOJI_POOL)]
-        decorated.append(f"{emoji} {para.strip()}")
+        # Если абзац уже начинается с эмодзи, не дублируем
+        if re.match(r'^[\U0001F300-\U0001FAFF]', para):
+            decorated.append(para)
+        else:
+            decorated.append(f"{emoji} {para.strip()}")
     return '\n\n'.join(decorated)
 
 def has_anime_titles(text):
@@ -126,7 +132,8 @@ def generate_content():
 
 Обязательные требования:
 - Приведи конкретные названия аниме (минимум 3), желательно в кавычках «».
-- Укажи жанры, студии, годы выхода, если уместно.
+- Укажи жанры, студии, годы выхода ТОЛЬКО если ты уверен в их точности. Актуальность: 2026 год.
+- Не выдумывай даты премьер, если не знаешь наверняка.
 - Текст должен быть полезным, информативным, без воды.
 - Запрещено задавать вопросы читателю.
 - Запрещены фразы "И что это...", "Как думаете...", "Непонятно...", "Впрочем...".
@@ -151,7 +158,7 @@ def generate_content():
             json={
                 "model": "GigaChat-3-Ultra",
                 "messages": [
-                    {"role": "system", "content": "Ты — опытный редактор аниме-канала. Ты всегда пишешь конкретно, с эмодзи, без риторических вопросов."},
+                    {"role": "system", "content": "Ты — опытный редактор аниме-канала. Ты пишешь конкретно, с эмодзи, без риторических вопросов и без выдуманных дат."},
                     {"role": "user", "content": prompt}
                 ],
                 "temperature": 0.7,
@@ -164,24 +171,27 @@ def generate_content():
         data = response.json()
         generated_text = data["choices"][0]["message"]["content"].strip()
 
-        # Логируем сырой ответ для диагностики
         print("=== RAW GigaChat Response ===")
         print(generated_text)
         print("============================")
 
         title, body = parse_generated_text(generated_text)
 
-        if title and body:
-            body = clean_generated_text(body)
-            if not has_anime_titles(body):
-                print("В сгенерированном тексте нет конкретных названий, пробуем ещё раз")
-                return None
-            if not re.search(r'[🎯📝🏆🎲🔮💬📅]', body):
-                body = add_emoji_to_text(body)
-            return title, body
-        else:
+        if not title or not body:
             print("Не удалось распознать результат GigaChat")
             return None
+
+        # Разбиваем на абзацы по 2 предложения
+        body = split_into_paragraphs(body)
+        # Добавляем эмодзи в начало абзацев, если их нет
+        body = add_emoji_to_paragraphs(body)
+
+        if not has_anime_titles(body):
+            print("В сгенерированном тексте нет конкретных названий")
+            return None
+
+        return title, body
+
     except Exception as e:
         print(f"Ошибка генерации контента: {e}")
         return None
