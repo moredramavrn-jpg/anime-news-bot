@@ -29,25 +29,15 @@ CONTENT_PLAN = {
     6: "📅 Ожидания: анонсы и премьеры следующей недели",
 }
 
-EMOJI_POOL = ["🌸", "⚡", "🔥", "💥", "🌟", "🎬", "🍥", "🗡️", "✨", "💫"]
-
 MONTHS_RU = [
     "января", "февраля", "марта", "апреля", "мая", "июня",
     "июля", "августа", "сентября", "октября", "ноября", "декабря"
 ]
 
-# Список реальных аниме для рейтингов (чтобы модель не выдумывала)
-REAL_ANIME_EXAMPLES = [
-    "«Магическая битва»", "«Атака титанов»", "«Клинок, рассекающий демонов»",
-    "«Семья шпиона»", "«Человек-бензопила»", "«Моя геройская академия»",
-    "«Токийские мстители»", "«Реинкарнация безработного»", "«Врата Штейна»",
-    "«Монолог фармацевта»", "«Поднятие уровня в одиночку»", "«Сага о Винланде»",
-    "«Блич: Тысячелетняя кровавая война»", "«Ван-Пис»", "«Наруто»"
-]
+EMOJI_POOL = ["🌸", "⚡", "🔥", "💥", "🌟", "🎬", "🍥", "🗡️", "✨", "💫"]
 
 def get_gigachat_token():
     global gigachat_access_token, gigachat_token_expires_at
-
     if gigachat_access_token and time.time() < gigachat_token_expires_at - 30:
         return gigachat_access_token
 
@@ -74,17 +64,82 @@ def get_gigachat_token():
         print(f"Ошибка получения токена GigaChat: {e}")
         return None
 
-def get_current_month_year():
+def get_current_season_info():
+    """Возвращает (месяц_ру, год, сезон_аниме)."""
     now = datetime.now()
-    month = MONTHS_RU[now.month - 1]
+    month = now.month
     year = now.year
-    return month, year
+    month_ru = MONTHS_RU[month - 1]
+
+    # Определяем аниме-сезон
+    if month in (1, 2, 3):
+        season = "WINTER"
+    elif month in (4, 5, 6):
+        season = "SPRING"
+    elif month in (7, 8, 9):
+        season = "SUMMER"
+    else:
+        season = "FALL"
+
+    return month_ru, year, season
+
+def get_top_anime_by_season(year, season, limit=5):
+    """Получает топ аниме сезона через AniList API."""
+    query = '''
+    query ($year: Int, $season: MediaSeason, $limit: Int) {
+      Page(page: 1, perPage: $limit) {
+        media(type: ANIME, seasonYear: $year, season: $season, sort: POPULARITY_DESC, isAdult: false) {
+          title {
+            romaji
+            english
+            native
+          }
+          averageScore
+          genres
+          studios(isMain: true) {
+            nodes {
+              name
+            }
+          }
+        }
+      }
+    }
+    '''
+    variables = {
+        "year": year,
+        "season": season,
+        "limit": limit
+    }
+    try:
+        r = requests.post(
+            "https://graphql.anilist.co",
+            json={"query": query, "variables": variables},
+            timeout=15
+        )
+        r.raise_for_status()
+        data = r.json()
+        media_list = data.get("data", {}).get("Page", {}).get("media", [])
+        result = []
+        for m in media_list:
+            title = m.get("title", {}).get("romaji") or m.get("title", {}).get("english") or "Без названия"
+            score = m.get("averageScore")
+            genres = ", ".join(m.get("genres", []))
+            studios = ", ".join([s.get("name", "") for s in m.get("studios", {}).get("nodes", [])])
+            result.append({
+                "title": title,
+                "score": score,
+                "genres": genres,
+                "studios": studios
+            })
+        return result
+    except Exception as e:
+        print(f"Ошибка получения данных AniList: {e}")
+        return []
 
 def parse_generated_text(raw_text):
     lines = raw_text.strip().split('\n')
     title = None
     body_lines = []
-
     for line in lines:
         if line.startswith('Заголовок:'):
             title = line.replace('Заголовок:', '').strip()
@@ -94,20 +149,32 @@ def parse_generated_text(raw_text):
             title = line.strip()
         else:
             body_lines.append(line.strip())
-
     body = '\n'.join([l for l in body_lines if l]).strip()
     if not title and body_lines:
         title = body_lines[0]
         body = '\n'.join(body_lines[1:]).strip()
-
     return title, body
+
+def normalize_rating_text(text):
+    lines = text.split('\n')
+    fixed = []
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if re.search(r'\d+\.\s*$', line) and i + 1 < len(lines):
+            combined = line + ' ' + lines[i+1].strip()
+            fixed.append(combined)
+            i += 2
+        else:
+            fixed.append(line)
+            i += 1
+    return '\n'.join(fixed)
 
 def split_into_paragraphs(text, sentences_per_par=2):
     text = re.sub(r'\s*\n\s*', ' ', text).strip()
     sentences = re.split(r'(?<=[.!?])\s+', text)
     if len(sentences) <= sentences_per_par:
         return text
-
     paragraphs = []
     current = []
     for sent in sentences:
@@ -117,7 +184,6 @@ def split_into_paragraphs(text, sentences_per_par=2):
             current = []
     if current:
         paragraphs.append(" ".join(current))
-
     return '\n\n'.join(paragraphs)
 
 def add_emoji_to_paragraphs(text):
@@ -141,31 +207,48 @@ def generate_content():
         return None
 
     weekday = datetime.now().weekday()
-    month, year = get_current_month_year()
-
+    month_ru, year, season = get_current_season_info()
     raw_topic = CONTENT_PLAN.get(weekday, "🎯 Подборка аниме")
-    topic = raw_topic.replace("{month}", month).replace("{year}", str(year))
+    topic = raw_topic.replace("{month}", month_ru).replace("{year}", str(year))
 
     if "Рейтинг" in topic:
-        # Для рейтинга указываем реальные аниме
-        real_examples = ", ".join(REAL_ANIME_EXAMPLES[:10])
-        system_msg = "Ты — редактор аниме-канала. Ты составляешь рейтинги аниме строго по пунктам, без лишних эмодзи и вопросов. Используй ТОЛЬКО реальные аниме, которые существуют."
-        prompt = f"""Составь рейтинг из 5 лучших аниме месяца {month} {year}. 
-Обязательно используй только реальные, существующие аниме. Примеры, которые точно существуют: {real_examples}.
-Формат строго:
-1. Название аниме (в кавычках «») — краткое описание (2-3 предложения).
-2. Название аниме — описание.
-И так далее.
+        # Получаем реальные аниме сезона
+        anime_list = get_top_anime_by_season(year, season, 5)
+        if anime_list:
+            # Формируем список для промпта
+            list_str = "\n".join([
+                f"• {a['title']} (рейтинг: {a['score']}/100, жанры: {a['genres']}, студия: {a['studios']})"
+                for a in anime_list
+            ])
+            system_msg = "Ты — редактор аниме-канала. Ты составляешь рейтинги на основе предоставленных данных, не выдумывая новых названий."
+            prompt = f"""Составь рейтинг из 5 лучших аниме месяца {month_ru} {year} на основе следующих данных (только эти названия):
 
-Каждый пункт рейтинга должен быть отдельным абзацем.
-Не добавляй эмодзи, кроме как перед номером позиции (можешь использовать 🥇🥈🥉 или просто цифры).
+{list_str}
+
+Формат строго:
+🥇 «Название аниме» — краткое описание (1-2 предложения).
+🥈 «Название аниме» — краткое описание.
+🥉 «Название аниме» — краткое описание.
+4. «Название аниме» — краткое описание.
+5. «Название аниме» — краткое описание.
+
+Каждый пункт отдельным абзацем.
+Используй только названия из списка.
+Не добавляй лишних эмодзи, кроме медалей и номеров.
 Не задавай вопросы, не пиши вводные слова.
-Не выдумывай даты и факты. Если сомневаешься — опусти.
 Напиши на русском языке.
 
 Выведи результат строго в формате:
 Заголовок: <заголовок поста>
 Текст: <текст рейтинга>
+"""
+        else:
+            # Если AniList не вернул данные, используем запасной промпт
+            system_msg = "Ты — редактор аниме-канала. Ты пишешь конкретно, без выдуманных названий."
+            prompt = f"""Составь пост на тему: "{topic}".
+Используй только реальные аниме, которые выходили в {month_ru} {year}.
+Если не уверен в названиях, лучше не пиши пост.
+Формат: рейтинг из 5 позиций.
 """
     else:
         system_msg = "Ты — опытный редактор аниме-канала. Ты пишешь конкретно, с эмодзи, без риторических вопросов и без выдуманных дат."
@@ -224,7 +307,9 @@ def generate_content():
             print("Не удалось распознать результат GigaChat")
             return None
 
-        if "Рейтинг" not in title:
+        if "Рейтинг" in title:
+            body = normalize_rating_text(body)
+        else:
             body = split_into_paragraphs(body)
             body = add_emoji_to_paragraphs(body)
 
