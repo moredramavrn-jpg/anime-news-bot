@@ -19,11 +19,11 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 gigachat_access_token = None
 gigachat_token_expires_at = 0
 
-# Контент-план по дням недели
+# Контент-план по дням недели (0 = понедельник, 6 = воскресенье)
 CONTENT_PLAN = {
     0: "🎯 Топ-5 аниме, которые стоит посмотреть на этой неделе",
     1: "📝 Совет: как выбрать аниме под настроение",
-    2: "🏆 Рейтинг: лучшие аниме текущего сезона",
+    2: "🏆 Рейтинг: лучшие аниме {month} {year}",
     3: "🎲 Факт дня: интересное из мира аниме",
     4: "🔮 Что посмотреть на выходных: подборка",
     5: "💬 Мнение: почему классика аниме не устаревает",
@@ -31,6 +31,12 @@ CONTENT_PLAN = {
 }
 
 EMOJI_POOL = ["🌸", "⚡", "🔥", "💥", "🌟", "🎬", "🍥", "🗡️", "✨", "💫"]
+
+# Русские названия месяцев
+MONTHS_RU = [
+    "января", "февраля", "марта", "апреля", "мая", "июня",
+    "июля", "августа", "сентября", "октября", "ноября", "декабря"
+]
 
 def get_gigachat_token():
     global gigachat_access_token, gigachat_token_expires_at
@@ -60,6 +66,12 @@ def get_gigachat_token():
     except Exception as e:
         print(f"Ошибка получения токена GigaChat: {e}")
         return None
+
+def get_current_month_year():
+    now = datetime.now()
+    month = MONTHS_RU[now.month - 1]
+    year = now.year
+    return month, year
 
 def parse_generated_text(raw_text):
     lines = raw_text.strip().split('\n')
@@ -121,11 +133,35 @@ def generate_content():
         print("Не удалось получить токен GigaChat")
         return None
 
-    weekday = datetime.utcnow().weekday()
-    topic = CONTENT_PLAN.get(weekday, "🎯 Подборка аниме")
+    weekday = datetime.now().weekday()
+    month, year = get_current_month_year()
 
-    # Обновлённый промпт с запретом на неточные даты
-    prompt = f"""Составь пост для Telegram-канала об аниме на тему: "{topic}".
+    # Формируем тему с учётом месяца/года для рейтинга
+    raw_topic = CONTENT_PLAN.get(weekday, "🎯 Подборка аниме")
+    topic = raw_topic.replace("{month}", month).replace("{year}", str(year))
+
+    # Для рейтинга используем особый промпт
+    if "Рейтинг" in topic:
+        system_msg = "Ты — редактор аниме-канала. Ты составляешь рейтинги аниме строго по пунктам, без лишних эмодзи и вопросов."
+        prompt = f"""Составь рейтинг из 5 лучших аниме месяца {month} {year}. 
+Формат строго:
+1. Название аниме (в кавычках «») — краткое описание (2-3 предложения).
+2. Название аниме — описание.
+И так далее.
+
+Каждый пункт рейтинга должен быть отдельным абзацем.
+Не добавляй эмодзи, кроме как перед номером позиции (можешь использовать 🥇🥈🥉 или просто цифры).
+Не задавай вопросы, не пиши вводные слова.
+Используй только достоверные данные. Если не уверен в датах, не указывай их.
+Напиши на русском языке.
+
+Выведи результат строго в формате:
+Заголовок: <заголовок поста>
+Текст: <текст рейтинга>
+"""
+    else:
+        system_msg = "Ты — опытный редактор аниме-канала. Ты пишешь конкретно, с эмодзи, без риторических вопросов и без выдуманных дат."
+        prompt = f"""Составь пост для Telegram-канала об аниме на тему: "{topic}".
 
 Обязательные требования:
 - Приведи конкретные названия аниме (минимум 3), желательно в кавычках «».
@@ -143,6 +179,7 @@ def generate_content():
 Заголовок: <заголовок поста>
 Текст: <текст поста>
 """
+
     try:
         response = requests.post(
             "https://api.giga.chat/v1/chat/completions",
@@ -156,11 +193,11 @@ def generate_content():
             json={
                 "model": "GigaChat-3-Ultra",
                 "messages": [
-                    {"role": "system", "content": "Ты — опытный редактор аниме-канала. Ты пишешь конкретно, с эмодзи, без риторических вопросов и без выдуманных дат."},
+                    {"role": "system", "content": system_msg},
                     {"role": "user", "content": prompt}
                 ],
                 "temperature": 0.7,
-                "max_tokens": 1000
+                "max_tokens": 1200 if "Рейтинг" in topic else 1000
             },
             timeout=30,
             verify=False
@@ -179,10 +216,10 @@ def generate_content():
             print("Не удалось распознать результат GigaChat")
             return None
 
-        # Разбиваем на абзацы по 2 предложения
-        body = split_into_paragraphs(body)
-        # Добавляем эмодзи в начало абзацев, если их нет
-        body = add_emoji_to_paragraphs(body)
+        # Для рейтинга не разбиваем на абзацы принудительно, оставляем как есть
+        if "Рейтинг" not in title:
+            body = split_into_paragraphs(body)
+            body = add_emoji_to_paragraphs(body)
 
         if not has_anime_titles(body):
             print("В сгенерированном тексте нет конкретных названий")
