@@ -84,8 +84,6 @@ def parse_generated_text(raw_text):
     return title, body
 
 def split_into_paragraphs(text, sentences_per_par=2):
-    """Разбивает текст на абзацы по 2 предложения."""
-    # Убираем множественные пробелы и переносы, чтобы было чисто
     text = re.sub(r'\s*\n\s*', ' ', text).strip()
     sentences = re.split(r'(?<=[.!?])\s+', text)
     if len(sentences) <= sentences_per_par:
@@ -104,12 +102,10 @@ def split_into_paragraphs(text, sentences_per_par=2):
     return '\n\n'.join(paragraphs)
 
 def add_emoji_to_paragraphs(text):
-    """Добавляет эмодзи в начало каждого абзаца."""
     paragraphs = text.split('\n\n')
     decorated = []
     for i, para in enumerate(paragraphs):
         emoji = EMOJI_POOL[i % len(EMOJI_POOL)]
-        # Если абзац уже начинается с эмодзи, не дублируем
         if re.match(r'^[\U0001F300-\U0001FAFF]', para):
             decorated.append(para)
         else:
@@ -128,12 +124,14 @@ def generate_content():
     weekday = datetime.utcnow().weekday()
     topic = CONTENT_PLAN.get(weekday, "🎯 Подборка аниме")
 
+    # Обновлённый промпт с запретом на неточные даты
     prompt = f"""Составь пост для Telegram-канала об аниме на тему: "{topic}".
 
 Обязательные требования:
 - Приведи конкретные названия аниме (минимум 3), желательно в кавычках «».
-- Укажи жанры, студии, годы выхода ТОЛЬКО если ты уверен в их точности. Актуальность: 2026 год.
-- Не выдумывай даты премьер, если не знаешь наверняка.
+- Укажи жанры, студии, годы выхода ТОЛЬКО если ты абсолютно уверен в их точности.
+- НЕ УКАЗЫВАЙ даты выхода или годы, если сомневаешься.
+- Не выдумывай факты.
 - Текст должен быть полезным, информативным, без воды.
 - Запрещено задавать вопросы читателю.
 - Запрещены фразы "И что это...", "Как думаете...", "Непонятно...", "Впрочем...".
