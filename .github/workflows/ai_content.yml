@@ -1,0 +1,29 @@
+name: AI Content Generator
+
+on:
+  schedule:
+    - cron: '0 12 * * *'   # каждый день в 12:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyTelegramBotAPI requests urllib3
+
+      - name: Run content generator
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          GIGACHAT_AUTHORIZATION_KEY: ${{ secrets.GIGACHAT_AUTHORIZATION_KEY }}
+        run: python ai_content.py
