@@ -30,7 +30,6 @@ CONTENT_PLAN = {
     6: "📅 Ожидания: анонсы и премьеры следующей недели",
 }
 
-# Эмодзи для украшения текста
 EMOJI_POOL = ["🌸", "⚡", "🔥", "💥", "🌟", "🎬", "🍥", "🗡️", "✨", "💫"]
 
 def get_gigachat_token():
@@ -62,8 +61,39 @@ def get_gigachat_token():
         print(f"Ошибка получения токена GigaChat: {e}")
         return None
 
+def parse_generated_text(raw_text):
+    """
+    Пытается извлечь заголовок и текст из ответа модели.
+    Если формат не соблюдён, использует эвристику:
+    заголовок = первая строка, текст = остальное.
+    """
+    lines = raw_text.strip().split('\n')
+    title = None
+    body_lines = []
+
+    for line in lines:
+        if line.startswith('Заголовок:'):
+            title = line.replace('Заголовок:', '').strip()
+        elif line.startswith('Текст:'):
+            body_lines.append(line.replace('Текст:', '').strip())
+        elif not title and not body_lines:
+            # Если первые строки не соответствуют формату, считаем первую строку заголовком
+            if len(line.strip()) > 3 and not line.startswith('Текст'):
+                title = line.strip()
+                continue
+        else:
+            body_lines.append(line.strip())
+
+    body = '\n'.join([l for l in body_lines if l]).strip()
+
+    # Если заголовок не найден, но есть текст – берём первую строку как заголовок
+    if not title and body_lines:
+        title = body_lines[0]
+        body = '\n'.join(body_lines[1:]).strip()
+
+    return title, body
+
 def clean_generated_text(text):
-    """Убирает вопросительные предложения."""
     sentences = re.split(r'(?<=[.!?])\s+', text)
     cleaned = []
     for sent in sentences:
@@ -73,16 +103,14 @@ def clean_generated_text(text):
     return ' '.join(cleaned)
 
 def add_emoji_to_text(text):
-    """Добавляет случайный эмодзи в начало каждого абзаца."""
     paragraphs = text.split('\n\n')
     decorated = []
-    for para in paragraphs:
-        emoji = EMOJI_POOL[len(decorated) % len(EMOJI_POOL)]
+    for i, para in enumerate(paragraphs):
+        emoji = EMOJI_POOL[i % len(EMOJI_POOL)]
         decorated.append(f"{emoji} {para.strip()}")
     return '\n\n'.join(decorated)
 
 def has_anime_titles(text):
-    """Проверяет, есть ли в тексте названия в кавычках."""
     return bool(re.search(r'«[^»]+»|"[^"]+"', text))
 
 def generate_content():
@@ -136,22 +164,18 @@ def generate_content():
         data = response.json()
         generated_text = data["choices"][0]["message"]["content"].strip()
 
-        title = ""
-        body = ""
-        for line in generated_text.split('\n'):
-            line = line.strip()
-            if line.startswith('Заголовок:'):
-                title = line.replace('Заголовок:', '').strip()
-            elif line.startswith('Текст:'):
-                body = line.replace('Текст:', '').strip()
+        # Логируем сырой ответ для диагностики
+        print("=== RAW GigaChat Response ===")
+        print(generated_text)
+        print("============================")
+
+        title, body = parse_generated_text(generated_text)
 
         if title and body:
             body = clean_generated_text(body)
-            # Проверяем наличие названий
             if not has_anime_titles(body):
                 print("В сгенерированном тексте нет конкретных названий, пробуем ещё раз")
                 return None
-            # Добавляем эмодзи в начало абзацев, если их ещё нет
             if not re.search(r'[🎯📝🏆🎲🔮💬📅]', body):
                 body = add_emoji_to_text(body)
             return title, body
