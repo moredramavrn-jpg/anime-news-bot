@@ -600,16 +600,6 @@ def remove_duplicate_start(title, body):
         body_clean = ' '.join(sentences[1:]).strip()
     return body_clean
 
-def make_title_from_text(text):
-    if not text:
-        return "", ""
-    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-    if not sentences:
-        return text, ""
-    first = sentences[0].strip()
-    rest = ' '.join(sentences[1:]).strip()
-    return first, rest
-
 def rewrite_news(title, body):
     if not GIGACHAT_AUTHORIZATION_KEY:
         return title, body
@@ -897,4 +887,8 @@ def main():
                 new_posts += 1
                 print(f"Опубликовано: {title}")
             except Exception as e:
-                print
+                print(f"Ошибка отправки для {link}: {e}")
+
+    if new_posts > 0:
+        save_posted(links, titles)
+        print(f"Сохранено {new_posts} новых записей в {POSTED_FILE
