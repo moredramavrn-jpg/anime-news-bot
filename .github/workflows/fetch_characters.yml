@@ -1,0 +1,38 @@
+name: Fetch Characters
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'   # раз в неделю, понедельник 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run fetch_characters.py
+        run: python fetch_characters.py
+
+      - name: Commit characters.txt
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add characters.txt
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Update characters.txt"
+            git pull --rebase --autostash origin ${{ github.ref_name }}
+            git push origin HEAD:${{ github.ref_name }}
+          fi
