@@ -891,4 +891,9 @@ def main():
 
     if new_posts > 0:
         save_posted(links, titles)
-        print(f"Сохранено {new_posts} новых записей в {POSTED_FILE
+        print(f"Сохранено {new_posts} новых записей в {POSTED_FILE}")
+    else:
+        print("Новых новостей нет.")
+
+if __name__ == "__main__":
+    main()
