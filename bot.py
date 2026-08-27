@@ -108,10 +108,6 @@ def get_page_soup(url):
         return None
 
 def extract_russian_anime_names(soup):
-    """
-    Извлекает все пары английское-русское название со страницы новости Shikimori.
-    Возвращает словарь {английское: русское}.
-    """
     pairs = {}
     if not soup:
         return pairs
@@ -128,9 +124,6 @@ def extract_russian_anime_names(soup):
     return pairs
 
 def replace_anime_names(text, name_pairs):
-    """
-    Заменяет в тексте английские названия на русские (по словарю).
-    """
     if not text or not name_pairs:
         return text
     for en, ru in name_pairs.items():
@@ -594,9 +587,6 @@ def get_gigachat_token():
         return None
 
 def remove_duplicate_start(title, body):
-    """
-    Убирает дублирование заголовка в начале текста.
-    """
     if not title or not body:
         return body
     title_clean = re.sub(r'<[^>]+>', '', title).strip().strip('«»').strip()
@@ -611,9 +601,6 @@ def remove_duplicate_start(title, body):
     return body_clean
 
 def make_title_from_text(text):
-    """
-    Создаёт заголовок из первого предложения текста.
-    """
     if not text:
         return "", ""
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
@@ -864,7 +851,6 @@ def main():
             title = replace_anime_names(title, name_pairs)
             full_text = replace_anime_names(full_text, name_pairs)
 
-        # Для Shikimori: делаем заголовок из первого предложения текста
         if full_text:
             new_title, new_body = make_title_from_text(full_text)
             if new_title:
@@ -911,13 +897,4 @@ def main():
                 new_posts += 1
                 print(f"Опубликовано: {title}")
             except Exception as e:
-                print(f"Ошибка отправки для {link}: {e}")
-
-    if new_posts > 0:
-        save_posted(links, titles)
-        print(f"Сохранено {new_posts} новых записей в {POSTED_FILE}")
-    else:
-        print("Новых новостей нет.")
-
-if __name__ == "__main__":
-    main()
+                print
