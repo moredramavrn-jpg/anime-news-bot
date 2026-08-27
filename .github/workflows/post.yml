@@ -2,7 +2,7 @@ name: Anime News Bot
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # каждые 5 минут (для теста)
+    - cron: '7,37 * * * *'   # каждые 5 минут (для теста)
   workflow_dispatch:         # ручной запуск
 
 permissions:
