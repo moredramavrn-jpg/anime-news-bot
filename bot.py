@@ -842,10 +842,7 @@ def main():
             full_text = replace_anime_names(full_text, name_pairs)
 
         if full_text:
-            new_title, new_body = make_title_from_text(full_text)
-            if new_title:
-                title = new_title
-                full_text = new_body
+            full_text = remove_duplicate_start(title, full_text)
 
         try:
             send_post(title, full_text, link, image_url, video_url, is_youtube)
@@ -896,4 +893,4 @@ def main():
         print("Новых новостей нет.")
 
 if __name__ == "__main__":
-    main()
+    main
