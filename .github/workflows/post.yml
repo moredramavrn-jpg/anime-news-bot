@@ -28,8 +28,6 @@ jobs:
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
           GIGACHAT_AUTHORIZATION_KEY: ${{ secrets.GIGACHAT_AUTHORIZATION_KEY }}
         run: python bot.py
-
-      🔥🟢 Изменённая часть начинается здесь 🟢🔥
       - name: Commit posted.txt if changed
         run: |
           git config --global user.name github-actions[bot]
