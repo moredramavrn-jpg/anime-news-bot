@@ -1,42 +1,44 @@
-name: AI Content Posting
+name: AI Top-5 Anime Weekly
 
 on:
   schedule:
-    - cron: '0 9 * * *'   # каждый день в 09:00 UTC (можно изменить)
+    - cron: '0 12 * * 1'   # каждый понедельник в 12:00 UTC
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  post:
+  generate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # получаем всю историю для корректного pull --rebase
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests pyTelegramBotAPI
+        run: pip install pyTelegramBotAPI requests urllib3
 
-      - name: Run ai_content.py
+      - name: Run content generator
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
           GIGACHAT_AUTHORIZATION_KEY: ${{ secrets.GIGACHAT_AUTHORIZATION_KEY }}
         run: python ai_content.py
 
-      - name: Commit updated used_anime.txt
+      - name: Commit used_anime.txt if changed
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add used_anime.txt
           if git diff --cached --quiet; then
-            echo "No changes"
+            echo "No changes to commit"
           else
             git commit -m "Update used_anime.txt"
-            git pull --rebase origin ${{ github.ref_name }}
+            git pull --rebase --autostash origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi
