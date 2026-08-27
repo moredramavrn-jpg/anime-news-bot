@@ -893,4 +893,4 @@ def main():
         print("Новых новостей нет.")
 
 if __name__ == "__main__":
-    main
+    main()
