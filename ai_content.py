@@ -77,7 +77,7 @@ def save_used_anime(anime_set):
         for name in anime_list:
             f.write(name + '\n')
 
-def giga_request(prompt, token, max_tokens=300):
+def giga_request(prompt, token, max_tokens=300, retries=3):
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -94,20 +94,27 @@ def giga_request(prompt, token, max_tokens=300):
         "temperature": 0.3,
         "max_tokens": max_tokens
     }
-    try:
-        response = requests.post(
-            "https://api.giga.chat/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=30,
-            verify=False
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        print(f"Ошибка GigaChat: {e}")
-        return ""
+
+    for attempt in range(retries):
+        try:
+            response = requests.post(
+                "https://api.giga.chat/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=30,
+                verify=False
+            )
+            if response.status_code == 429:
+                print("Слишком много запросов, ждём 10 секунд...")
+                time.sleep(10)
+                continue
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            print(f"Ошибка GigaChat (попытка {attempt+1}): {e}")
+            time.sleep(5)
+    return ""
 
 def generate_description(anime_name, token):
     prompt = f"Опиши аниме «{anime_name}» в одном-двух предложениях, кратко, на русском языке. Не добавляй название, только описание."
@@ -194,13 +201,27 @@ def generate_recommendations():
 
     cards = []
     for idx, name in enumerate(chosen):
+        # Пауза перед каждым запросом, кроме первого
+        if idx > 0:
+            time.sleep(2)
+
         desc = generate_description(name, token)
         if not desc:
-            print(f"Не удалось получить описание для '{name}'")
-            return None
+            print(f"Не удалось получить описание для '{name}', пробуем ещё раз...")
+            time.sleep(5)
+            desc = generate_description(name, token)
+            if not desc:
+                print(f"Повторно не удалось получить описание для '{name}'")
+                return None
 
         print(f"Запрос метаданных для '{name}'...")
         genres, episodes, status = get_anime_meta(name, token)
+
+        # Если метаданные пустые, пробуем ещё раз
+        if not genres and not episodes and not status:
+            time.sleep(5)
+            print(f"Повторный запрос метаданных для '{name}'...")
+            genres, episodes, status = get_anime_meta(name, token)
 
         genres_str = genres if genres else "жанр не указан"
         episodes_str = episodes_word(episodes) if episodes and episodes != "?" else "кол-во серий неизвестно"
@@ -211,8 +232,6 @@ def generate_recommendations():
 
         emoji = ITEM_EMOJI[idx % len(ITEM_EMOJI)]
 
-        # Формат: эмодзи «Название» — описание
-        # Затем цитата с метаданными
         card = f"{emoji} <b>«{name}»</b> — {desc}\n<blockquote>[{meta}]</blockquote>"
         if idx < len(chosen) - 1:
             card += "\n────────────────"
