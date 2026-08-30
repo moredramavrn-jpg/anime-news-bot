@@ -1,8 +1,6 @@
 name: Anime Quiz
 
 on:
-  schedule:
-    - cron: '0 15 */2 * *'   # каждый второй день в 15:00 UTC
   workflow_dispatch:
 
 permissions:
