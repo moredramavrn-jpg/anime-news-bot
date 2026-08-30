@@ -1,8 +1,6 @@
 name: Fetch Characters
 
 on:
-  schedule:
-    - cron: '0 4 * * 1'   # раз в неделю, понедельник 04:00 UTC
   workflow_dispatch:
 
 permissions:
