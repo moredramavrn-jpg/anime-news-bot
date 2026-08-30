@@ -1,8 +1,6 @@
 name: Update Top Anime List
 
 on:
-  schedule:
-    - cron: '0 3 * * 1'   # каждый понедельник в 03:00 UTC
   workflow_dispatch:
 
 permissions:
