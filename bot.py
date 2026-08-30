@@ -30,6 +30,7 @@ RSS_URLS = [
 SHIKIMORI_MAIN = "https://shikimori.io/"
 
 POSTED_FILE = "posted.txt"
+RECENT_KEYS_FILE = "recent_news_keys.txt"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -72,6 +73,53 @@ def is_duplicate(link, title, links, titles):
         if SequenceMatcher(None, norm_title, existing_title).ratio() > 0.9:
             return True
     return False
+
+# ---------- Семантическая защита от дублей ----------
+def extract_key(title):
+    """Извлекает ключевое слово: название аниме в кавычках или первые слова."""
+    match = re.search(r'«([^»]+)»', title)
+    if match:
+        return match.group(1).lower()
+    # Иначе первые 3 значимых слова
+    words = re.sub(r'[^\w\s]', '', title).split()
+    return ' '.join(words[:3]).lower()
+
+def load_recent_keys():
+    keys = {}
+    if os.path.exists(RECENT_KEYS_FILE):
+        with open(RECENT_KEYS_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if '|' in line:
+                    key, timestamp = line.split('|', 1)
+                    try:
+                        keys[key] = float(timestamp)
+                    except:
+                        pass
+    return keys
+
+def save_recent_keys(keys):
+    # Удаляем устаревшие (старше 7 дней)
+    cutoff = time.time() - 7 * 86400
+    keys = {k: v for k, v in keys.items() if v > cutoff}
+    with open(RECENT_KEYS_FILE, 'w', encoding='utf-8') as f:
+        for key, timestamp in keys.items():
+            f.write(f"{key}|{timestamp}\n")
+
+def is_duplicate_semantic(title, keys):
+    key = extract_key(title)
+    if not key:
+        return False
+    if key in keys:
+        timestamp = keys[key]
+        if time.time() - timestamp < 7 * 86400:
+            return True
+    return False
+
+def update_keys(title, keys):
+    key = extract_key(title)
+    if key:
+        keys[key] = time.time()
 
 # ---------- HTML / парсинг ----------
 def clean_html(raw_html):
@@ -820,6 +868,7 @@ def fetch_shikimori_news_from_main_page():
 
 def main():
     links, titles = load_posted()
+    recent_keys = load_recent_keys()
     new_posts = 0
 
     print("Обрабатываю новости Shikimori с главной страницы...")
@@ -829,6 +878,10 @@ def main():
         title = news['title']
         if is_duplicate(link, title, links, titles):
             print(f"Дубликат пропущен: {title}")
+            continue
+
+        if is_duplicate_semantic(title, recent_keys):
+            print(f"Дубликат по смыслу пропущен: {title}")
             continue
 
         soup = get_page_soup(link)
@@ -848,6 +901,7 @@ def main():
             send_post(title, full_text, link, image_url, video_url, is_youtube)
             links.add(link)
             titles.add(normalize_title(title))
+            update_keys(title, recent_keys)
             new_posts += 1
             print(f"Опубликовано: {title}")
         except Exception as e:
@@ -872,6 +926,10 @@ def main():
                 print(f"Дубликат пропущен: {title}")
                 continue
 
+            if is_duplicate_semantic(title, recent_keys):
+                print(f"Дубликат по смыслу пропущен: {title}")
+                continue
+
             soup = get_page_soup(link) if link else None
             full_text = fetch_full_text(entry)
             image_url = fetch_image_url(entry, soup)
@@ -881,6 +939,7 @@ def main():
                 send_post(title, full_text, link, image_url, video_url, is_youtube)
                 links.add(link)
                 titles.add(normalize_title(title))
+                update_keys(title, recent_keys)
                 new_posts += 1
                 print(f"Опубликовано: {title}")
             except Exception as e:
@@ -888,6 +947,7 @@ def main():
 
     if new_posts > 0:
         save_posted(links, titles)
+        save_recent_keys(recent_keys)
         print(f"Сохранено {new_posts} новых записей в {POSTED_FILE}")
     else:
         print("Новых новостей нет.")
