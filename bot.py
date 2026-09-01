@@ -30,7 +30,7 @@ RSS_URLS = [
 SHIKIMORI_MAIN = "https://shikimori.io/"
 
 POSTED_FILE = "posted.txt"
-RECENT_KEYS_FILE = "recent_news_keys.txt"
+RECENT_TITLES_FILE = "recent_titles.json"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -74,52 +74,98 @@ def is_duplicate(link, title, links, titles):
             return True
     return False
 
-# ---------- Семантическая защита от дублей ----------
-def extract_key(title):
-    """Извлекает ключевое слово: название аниме в кавычках или первые слова."""
-    match = re.search(r'«([^»]+)»', title)
-    if match:
-        return match.group(1).lower()
-    # Иначе первые 3 значимых слова
-    words = re.sub(r'[^\w\s]', '', title).split()
-    return ' '.join(words[:3]).lower()
+# ---------- Хранение недавних заголовков ----------
+def load_recent_titles():
+    if os.path.exists(RECENT_TITLES_FILE):
+        with open(RECENT_TITLES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
 
-def load_recent_keys():
-    keys = {}
-    if os.path.exists(RECENT_KEYS_FILE):
-        with open(RECENT_KEYS_FILE, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if '|' in line:
-                    key, timestamp = line.split('|', 1)
-                    try:
-                        keys[key] = float(timestamp)
-                    except:
-                        pass
-    return keys
-
-def save_recent_keys(keys):
-    # Удаляем устаревшие (старше 7 дней)
+def save_recent_titles(titles):
+    # Оставляем только записи за последние 7 дней
     cutoff = time.time() - 7 * 86400
-    keys = {k: v for k, v in keys.items() if v > cutoff}
-    with open(RECENT_KEYS_FILE, 'w', encoding='utf-8') as f:
-        for key, timestamp in keys.items():
-            f.write(f"{key}|{timestamp}\n")
+    titles = [t for t in titles if t.get("timestamp", 0) > cutoff]
+    with open(RECENT_TITLES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(titles, f, ensure_ascii=False)
 
-def is_duplicate_semantic(title, keys):
-    key = extract_key(title)
-    if not key:
+# ---------- GigaChat API ----------
+def get_gigachat_token():
+    global gigachat_access_token, gigachat_token_expires_at
+
+    if gigachat_access_token and time.time() < gigachat_token_expires_at - 30:
+        return gigachat_access_token
+
+    url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "RqUID": str(uuid.uuid4()),
+        "Authorization": f"Basic {GIGACHAT_AUTHORIZATION_KEY}"
+    }
+    data = {"scope": "GIGACHAT_API_PERS"}
+    try:
+        r = requests.post(url, headers=headers, data=data, timeout=15, verify=False)
+        r.raise_for_status()
+        token_data = r.json()
+        gigachat_access_token = token_data.get("access_token")
+        expires_at = token_data.get("expires_at")
+        if expires_at:
+            gigachat_token_expires_at = expires_at / 1000 if expires_at > 10**12 else expires_at
+        else:
+            gigachat_token_expires_at = time.time() + 1800
+        return gigachat_access_token
+    except Exception as e:
+        print(f"Ошибка получения токена GigaChat: {e}")
+        return None
+
+def giga_request(prompt, max_tokens=500):
+    token = get_gigachat_token()
+    if not token:
+        return ""
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "X-Request-ID": str(uuid.uuid4()),
+        "X-Session-ID": str(uuid.uuid4()),
+        "User-Agent": "AnimeNewsBot/1.0"
+    }
+    payload = {
+        "model": "GigaChat-3-Ultra",
+        "messages": [
+            {"role": "system", "content": "Ты — помощник для проверки новостей."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.2,
+        "max_tokens": max_tokens
+    }
+    try:
+        r = requests.post("https://api.giga.chat/v1/chat/completions",
+                          headers=headers, json=payload, timeout=30, verify=False)
+        r.raise_for_status()
+        data = r.json()
+        return data["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        print(f"Ошибка GigaChat: {e}")
+        return ""
+
+def is_similar_news(title, body, recent_titles):
+    """Проверяет через GigaChat, является ли новость дубликатом по смыслу."""
+    if not recent_titles:
         return False
-    if key in keys:
-        timestamp = keys[key]
-        if time.time() - timestamp < 7 * 86400:
-            return True
-    return False
 
-def update_keys(title, keys):
-    key = extract_key(title)
-    if key:
-        keys[key] = time.time()
+    recent = '\n'.join([t["title"] for t in recent_titles[-20:]])
+    prompt = f"""Сравни новую новость с уже опубликованными за последние 7 дней.
+
+Новая новость:
+Заголовок: {title}
+Текст: {body[:500]}
+
+Уже опубликованные:
+{recent}
+
+Ответь только "да", если новая новость по сути такая же (дубликат), иначе "нет"."""
+    answer = giga_request(prompt, max_tokens=10)
+    return answer.strip().lower() == "да"
 
 # ---------- HTML / парсинг ----------
 def clean_html(raw_html):
@@ -604,36 +650,6 @@ def is_podcast_entry(entry):
         return True
     return False
 
-# ---------- GigaChat API ----------
-def get_gigachat_token():
-    global gigachat_access_token, gigachat_token_expires_at
-
-    if gigachat_access_token and time.time() < gigachat_token_expires_at - 30:
-        return gigachat_access_token
-
-    url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
-        "RqUID": str(uuid.uuid4()),
-        "Authorization": f"Basic {GIGACHAT_AUTHORIZATION_KEY}"
-    }
-    data = {"scope": "GIGACHAT_API_PERS"}
-    try:
-        r = requests.post(url, headers=headers, data=data, timeout=15, verify=False)
-        r.raise_for_status()
-        token_data = r.json()
-        gigachat_access_token = token_data.get("access_token")
-        expires_at = token_data.get("expires_at")
-        if expires_at:
-            gigachat_token_expires_at = expires_at / 1000 if expires_at > 10**12 else expires_at
-        else:
-            gigachat_token_expires_at = time.time() + 1800
-        return gigachat_access_token
-    except Exception as e:
-        print(f"Ошибка получения токена GigaChat: {e}")
-        return None
-
 def remove_duplicate_start(title, body):
     if not title or not body:
         return body
@@ -868,7 +884,7 @@ def fetch_shikimori_news_from_main_page():
 
 def main():
     links, titles = load_posted()
-    recent_keys = load_recent_keys()
+    recent_titles = load_recent_titles()
     new_posts = 0
 
     print("Обрабатываю новости Shikimori с главной страницы...")
@@ -880,12 +896,13 @@ def main():
             print(f"Дубликат пропущен: {title}")
             continue
 
-        if is_duplicate_semantic(title, recent_keys):
-            print(f"Дубликат по смыслу пропущен: {title}")
-            continue
-
         soup = get_page_soup(link)
         full_text = fetch_full_text({'link': link, 'title': title})
+
+        if is_similar_news(title, full_text, recent_titles):
+            print(f"Похожая новость пропущена: {title}")
+            continue
+
         image_url = news.get('image_url')
         video_url, is_youtube = fetch_video_info({'link': link}, soup)
 
@@ -901,7 +918,7 @@ def main():
             send_post(title, full_text, link, image_url, video_url, is_youtube)
             links.add(link)
             titles.add(normalize_title(title))
-            update_keys(title, recent_keys)
+            recent_titles.append({"title": title, "timestamp": time.time()})
             new_posts += 1
             print(f"Опубликовано: {title}")
         except Exception as e:
@@ -926,12 +943,13 @@ def main():
                 print(f"Дубликат пропущен: {title}")
                 continue
 
-            if is_duplicate_semantic(title, recent_keys):
-                print(f"Дубликат по смыслу пропущен: {title}")
-                continue
-
             soup = get_page_soup(link) if link else None
             full_text = fetch_full_text(entry)
+
+            if is_similar_news(title, full_text, recent_titles):
+                print(f"Похожая новость пропущена: {title}")
+                continue
+
             image_url = fetch_image_url(entry, soup)
             video_url, is_youtube = fetch_video_info(entry, soup)
 
@@ -939,7 +957,7 @@ def main():
                 send_post(title, full_text, link, image_url, video_url, is_youtube)
                 links.add(link)
                 titles.add(normalize_title(title))
-                update_keys(title, recent_keys)
+                recent_titles.append({"title": title, "timestamp": time.time()})
                 new_posts += 1
                 print(f"Опубликовано: {title}")
             except Exception as e:
@@ -947,7 +965,7 @@ def main():
 
     if new_posts > 0:
         save_posted(links, titles)
-        save_recent_keys(recent_keys)
+        save_recent_titles(recent_titles)
         print(f"Сохранено {new_posts} новых записей в {POSTED_FILE}")
     else:
         print("Новых новостей нет.")
