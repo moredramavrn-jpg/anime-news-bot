@@ -10,7 +10,6 @@ import urllib3
 import feedparser
 import telebot
 import requests
-import yt_dlp
 from difflib import SequenceMatcher
 from urllib.parse import urljoin, urlparse, unquote
 from bs4 import BeautifulSoup
@@ -36,6 +35,13 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 gigachat_access_token = None
 gigachat_token_expires_at = 0
+
+# ---------- Утилита: длина текста как её считает Telegram ----------
+def telegram_len(s):
+    """Telegram считает длину текста в UTF-16 code units, а не в Python len()."""
+    if not s:
+        return 0
+    return len(s.encode('utf-16-le')) // 2
 
 # ---------- Работа с опубликованными ----------
 def normalize_title(title):
@@ -148,7 +154,6 @@ def giga_request(prompt, max_tokens=500):
         return ""
 
 def is_similar_news(title, body, recent_titles):
-    """Проверяет через GigaChat, является ли новость дубликатом по смыслу."""
     if not recent_titles:
         return False
 
@@ -261,6 +266,117 @@ def extract_full_text_from_page(soup):
         return clean_html(str(main_content))
     return ""
 
+def collapse_repeated_phrases(text, max_words=8):
+    """
+    Убирает подряд идущие повторы одной и той же фразы длиной 1-8 слов.
+    Также удаляет дублирование, когда одно и то же слово повторяется подряд.
+    """
+    if not text:
+        return text
+    
+    # Сначала убираем простое дублирование слов подряд
+    # Например: "Наруто Наруто" -> "Наруто"
+    words = text.split()
+    result = []
+    i = 0
+    while i < len(words):
+        # Проверяем дублирование одного слова
+        if i + 1 < len(words) and words[i].lower() == words[i + 1].lower():
+            # Убираем дублирование специальных слов (имена, названия)
+            # Проверяем, что это не часть нормальной фразы (например, "то то")
+            if words[i].lower() not in ['то', 'на', 'по', 'за', 'из', 'от']:
+                result.append(words[i])
+                i += 2
+                continue
+        result.append(words[i])
+        i += 1
+    
+    # Теперь проверяем дублирование фраз (2-8 слов)
+    text = ' '.join(result)
+    words = text.split()
+    result = []
+    i = 0
+    n_words = len(words)
+    
+    while i < n_words:
+        matched = False
+        # Пробуем найти повтор фразы
+        for n in range(min(max_words, (n_words - i) // 2), 1, -1):
+            first = [w.lower().strip('«»"\'.,;:!?') for w in words[i:i + n]]
+            second = [w.lower().strip('«»"\'.,;:!?') for w in words[i + n:i + 2 * n]]
+            # Проверяем совпадение (игнорируем регистр и знаки препинания)
+            if first == second and any(first) and len(' '.join(first)) > 2:
+                result.extend(words[i:i + n])
+                i += 2 * n
+                matched = True
+                break
+        if not matched:
+            result.append(words[i])
+            i += 1
+    
+    return ' '.join(result)
+
+def clean_shikimori_links(text):
+    """
+    Очищает текст от дублей, создаваемых ссылками на Shikimori.
+    Например: «NarutoНаруто» -> «Наруто»
+    Hayato DateХаято Датэ -> Хаято Датэ
+    """
+    if not text:
+        return text
+    
+    # Убираем дубли в кавычках: «NarutoНаруто» -> «Наруто»
+    # Ищем паттерн: «[англ. название][рус. название]» и оставляем только русское
+    pattern = r'«([A-Za-z0-9\s]+)([А-Яа-я\s]+)»'
+    text = re.sub(pattern, r'«\2»', text)
+    
+    # Тоже самое без кавычек: NarutoНаруто -> Наруто
+    # Проверяем, что вторая часть — это русское название
+    def replace_en_ru(match):
+        en_part = match.group(1).strip()
+        ru_part = match.group(2).strip()
+        # Если русская часть больше 2 символов и это похоже на имя/название
+        if len(ru_part) > 2 and re.search(r'[А-Я]', ru_part):
+            return ru_part
+        return match.group(0)
+    
+    # Сначала ищем английское слово за которым сразу идёт русское
+    # Например: "Hayato DateХаято Датэ" -> "Хаято Датэ"
+    pattern = r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)([А-Я][а-я]+(?:\s+[А-Я][а-я]+)*)'
+    text = re.sub(pattern, replace_en_ru, text)
+    
+    # Убираем дубли имён: "Хаято Датэ Хаято Датэ" -> "Хаято Датэ"
+    pattern = r'([А-Я][а-я]+\s+[А-Я][а-я]+)\s+\1'
+    text = re.sub(pattern, r'\1', text)
+    
+    # Убираем дубли названий: "Наруто Наруто" -> "Наруто"
+    pattern = r'([А-Я][а-я]+)\s+\1(?=\s|$|[,.:;!?])'
+    text = re.sub(pattern, r'\1', text)
+    
+    return text
+
+def clean_duplicate_title(title):
+    """Убирает дублирование в заголовке"""
+    if not title:
+        return title
+    
+    # Убираем дубли: «NarutoНаруто» -> «Наруто»
+    title = re.sub(r'«([A-Za-z0-9\s]+)([А-Яа-я\s]+)»', r'«\2»', title)
+    
+    # Убираем дубли имён в заголовке
+    title = re.sub(r'([А-Я][а-я]+\s+[А-Я][а-я]+)\s+\1', r'\1', title)
+    title = re.sub(r'([А-Я][а-я]+)\s+\1(?=\s|$|[,.:;!?])', r'\1', title)
+    
+    # Убираем повтор одинаковых слов подряд
+    words = title.split()
+    result = []
+    for w in words:
+        if result and w.lower() == result[-1].lower():
+            continue
+        result.append(w)
+    
+    return ' '.join(result)
+
 def fetch_full_text(entry):
     link = entry.get('link', '')
 
@@ -271,7 +387,10 @@ def fetch_full_text(entry):
             if body_inner:
                 full_text = clean_html(str(body_inner))
                 if full_text:
-                    return full_text[:2000]
+                    full_text = collapse_repeated_phrases(full_text)
+                    full_text = clean_shikimori_links(full_text)
+                    full_text = re.sub(r'^([^.!?]+)\s+\1\s*', r'\1 ', full_text, flags=re.IGNORECASE)
+                    return full_text
         summary = entry.get('summary', '') or entry.get('description', '')
         if summary:
             return clean_html(summary)
@@ -282,7 +401,9 @@ def fetch_full_text(entry):
         if soup:
             full_text = extract_full_text_from_page(soup)
             if full_text:
-                return full_text[:2000]
+                full_text = collapse_repeated_phrases(full_text)
+                full_text = clean_shikimori_links(full_text)
+                return full_text
     summary = entry.get('summary', '') or entry.get('description', '')
     if summary:
         return clean_html(summary)
@@ -463,27 +584,6 @@ def fetch_video_info(entry, soup=None):
         return extract_video_url_from_page(soup)
     return None, False
 
-def download_youtube_video(youtube_url):
-    try:
-        ydl_opts = {
-            'format': 'best[ext=mp4]',
-            'outtmpl': '-',
-            'quiet': True,
-            'noplaylist': True,
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(youtube_url, download=False)
-            video_url = info.get('url')
-            if video_url:
-                r = requests.get(video_url, stream=True, timeout=30)
-                r.raise_for_status()
-                video_bytes = io.BytesIO(r.content)
-                video_bytes.seek(0)
-                return video_bytes
-    except Exception as e:
-        print(f"Не удалось скачать YouTube-видео {youtube_url}: {e}")
-    return None
-
 def download_image(url, referer=None):
     try:
         headers = {
@@ -500,12 +600,12 @@ def download_image(url, referer=None):
 
 # ---------- Обработка текста ----------
 def simple_truncate_by_sentences(text, max_len):
-    if len(text) <= max_len:
+    if telegram_len(text) <= max_len:
         return text
     sentences = re.split(r'(?<=[.!?])\s+', text)
     result = ""
     for s in sentences:
-        if len(result) + len(s) + 1 > max_len:
+        if telegram_len(result) + telegram_len(s) + 1 > max_len:
             break
         result = (result + " " + s).strip()
     if not result:
@@ -513,20 +613,42 @@ def simple_truncate_by_sentences(text, max_len):
     return result
 
 def truncate_by_words(text, max_len):
-    if len(text) <= max_len:
+    if telegram_len(text) <= max_len:
         return text
     words = text.split()
     result = []
     current_len = 0
     for w in words:
-        if current_len + len(w) + 1 > max_len:
+        w_len = telegram_len(w) + 1
+        if current_len + w_len > max_len:
             break
         result.append(w)
-        current_len += len(w) + 1
+        current_len += w_len
+    return ' '.join(result)
+
+def truncate_to_full_sentences(text, max_len):
+    if telegram_len(text) <= max_len:
+        return text
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    result = []
+    current_len = 0
+    for s in sentences:
+        sep_len = 1 if result else 0
+        s_len = telegram_len(s) + sep_len
+        if current_len + s_len <= max_len:
+            result.append(s)
+            current_len += s_len
+        else:
+            break
     return ' '.join(result)
 
 def strip_html_tags(text):
     return re.sub(r'<[^>]+>', '', text)
+
+def normalize_whitespace(text):
+    if not text:
+        return text
+    return re.sub(r'\s+', ' ', text).strip()
 
 def fix_quotes(text):
     result = []
@@ -619,7 +741,7 @@ def extract_title_hashtag(title):
     return None
 
 def build_post_html(title, body, emoji='📄'):
-    title_esc = escape_html(title)
+    title_esc = escape_html(normalize_whitespace(title))
     body_formatted = format_news_body(body) if body else ""
 
     parts = [f"{emoji} <b>{title_esc}</b>"]
@@ -629,9 +751,6 @@ def build_post_html(title, body, emoji='📄'):
         parts.append(body_formatted)
 
     hashtags = ["#аниме", "#новости"]
-    title_tag = extract_title_hashtag(title)
-    if title_tag and title_tag not in hashtags:
-        hashtags.append(title_tag)
 
     parts.append("")
     parts.append("🏷️ " + " ".join(hashtags))
@@ -663,7 +782,7 @@ def remove_duplicate_start(title, body):
         body_clean = ' '.join(sentences[1:]).strip()
     return body_clean
 
-def rewrite_news(title, body):
+def rewrite_news(title, body, target_len=None):
     if not GIGACHAT_AUTHORIZATION_KEY:
         return title, body
 
@@ -671,19 +790,56 @@ def rewrite_news(title, body):
     if not token:
         return title, body
 
-    body_part = body[:2000]
+    body_part = body[:4000]
+    source_len = telegram_len(body_part)
 
-    prompt = f"""Перефразируй следующий текст новости, сохраняя все факты, названия и имена.
-Не увеличивай объём: если текст короткий, оставь его коротким. Если текст длинный, можешь оставить его примерно той же длины, но не более 2000 символов.
-Не добавляй домыслы и не придумывай подробности.
-Разбей на абзацы по 2 предложения (если возможно). Используй кавычки «».
-Не задавай вопросов, не пиши от себя.
+    if target_len is None:
+        target_len = source_len
+
+    needs_compression = source_len > target_len * 1.1
+
+    if needs_compression:
+        length_instruction = f"""ЦЕЛЕВАЯ ДЛИНА: примерно {target_len} символов (можно на 10-15% меньше, но не больше).
+Оригинал длиннее цели, поэтому нужно СОКРАТИТЬ текст — но не механической обрезкой, а умным пересказом:
+убери второстепенные детали и подробности, оставь только главную суть, ключевые факты, даты, имена и названия.
+Текст ОБЯЗАТЕЛЬНО должен быть завершённым: заканчиваться полным предложением с точкой, доводить мысль до конца.
+Никогда не обрывай текст на середине предложения или мысли — лучше выбрось менее важную деталь целиком,
+чем оставить незаконченную фразу."""
+    else:
+        length_instruction = f"""ЦЕЛЕВАЯ ДЛИНА: примерно {target_len} символов, плюс-минус немного.
+Не сокращай текст искусственно и не выбрасывай детали без необходимости — просто перескажи своими словами
+примерно того же объёма. Текст должен заканчиваться полным, законченным предложением."""
+
+    prompt = f"""Ты — опытный журналист новостного портала об аниме. Перепиши текст новости своими словами,
+как будто пишешь для своей редакции — живо, естественно, без канцелярита и без ощущения, что текст писала нейросеть.
+
+{length_instruction}
+
+СТИЛЬ — ПИШИ КАК ЖИВОЙ ЧЕЛОВЕК:
+- Пиши так, как обычный человек рассказывает интересную новость другу: простыми, естественными фразами.
+- Варьируй начала предложений и абзацев — не начинай два абзаца подряд одинаковой конструкцией.
+- Используй разную длину предложений: где-то короткое и хлёсткое, где-то развёрнутое.
+- Сохраняй все факты, имена, названия, даты и цифры ТОЧНО как в оригинале — здесь нельзя ошибаться.
+- Используй кавычки «» для названий и цитат.
+- Разбивай текст на абзацы по 2 предложения (если это не нарушает смысл).
+
+ЖЁСТКО ЗАПРЕЩЕНО — так пишут нейросети, а не журналисты, никогда не используй:
+- Канцелярские и вводные штампы: «стоит отметить», «важно отметить», «следует сказать», «таким образом»,
+  «в заключение», «необходимо подчеркнуть», «нельзя не отметить», «отдельно стоит сказать».
+- Слова-паразиты нейросетей: «безусловно», «несомненно», «в целом», «в общем и целом», «более того»,
+  «примечательно, что», «интересно, что», «стоит также упомянуть».
+- Однотипные вводные конструкции в начале двух и более абзацев подряд (например, два абзаца, начинающихся с «Также»).
+- Риторические вопросы, обращения к читателю («как думаете?», «согласны?»).
+- Собственное мнение, оценки, домыслы, предположения, которых нет в оригинале.
+- Штампованные метафоры и клише («настоящий подарок для фанатов», «не оставит равнодушным»).
+
+Заголовок должен быть конкретным и по существу, без кликбейта и без придуманных деталей.
 
 Заголовок: {title}
 
 Текст: {body_part}
 
-Выведи результат строго в формате:
+Выведи результат СТРОГО в формате, без пояснений от себя:
 Заголовок: <новый заголовок>
 Текст: <новый текст>
 """
@@ -700,11 +856,11 @@ def rewrite_news(title, body):
             json={
                 "model": "GigaChat-3-Ultra",
                 "messages": [
-                    {"role": "system", "content": "Ты — редактор аниме-новостей."},
+                    {"role": "system", "content": "Ты — опытный редактор аниме-новостей, который пишет живым человеческим языком, а не канцеляритом. Ты всегда укладываешься в заданную длину текста и всегда доводишь мысль до конца, не обрывая текст на полуслове."},
                     {"role": "user", "content": prompt}
                 ],
-                "temperature": 0.4,
-                "max_tokens": 1200
+                "temperature": 0.6,
+                "max_tokens": min(4000, max(800, target_len + 400))
             },
             timeout=30,
             verify=False
@@ -732,7 +888,12 @@ def rewrite_news(title, body):
         new_body = remove_duplicate_start(new_title, new_body)
 
         if new_title and new_body:
+            new_len = telegram_len(new_body)
             print(f"GigaChat вернул новый заголовок: {new_title[:50]}...")
+            print(f"[DEBUG] Длина после рерайта: {new_len}, цель: {target_len}, исходник: {source_len}")
+            if new_len > target_len * 1.25 or new_len < target_len * 0.5:
+                print(f"[WARNING] Длина рерайта сильно отклоняется от цели, используем оригинальный текст")
+                return title, body
             return new_title, new_body
         else:
             return title, body
@@ -741,27 +902,26 @@ def rewrite_news(title, body):
         return title, body
 
 def build_caption_fit(title, body, emoji, max_len=1024):
+    title = normalize_whitespace(title)
     full_html = build_post_html(title, body, emoji)
     plain_text = strip_html_tags(full_html)
 
-    if len(plain_text) <= max_len:
+    if telegram_len(plain_text) <= max_len:
         return full_html
 
     hashtags = ["#аниме", "#новости"]
-    title_tag = extract_title_hashtag(title)
-    if title_tag and title_tag not in hashtags:
-        hashtags.append(title_tag)
     tags_str = " ".join(hashtags)
 
     title_plain = f"{emoji} {title}"
     separator_plain = "┄┄┄ ✦ ┄┄┄"
     footer_plain = f"🏷️ {tags_str}"
 
-    base_len = len(title_plain) + len(separator_plain) + len(footer_plain) + 6
+    base_len = (telegram_len(title_plain) + telegram_len(separator_plain) +
+                telegram_len(footer_plain) + 4)
     available = max_len - base_len
 
     if available < 50:
-        return truncate_by_words(plain_text, max_len)
+        return f"{emoji} <b>{escape_html(title)}</b>\n\n🏷️ {tags_str}"
 
     body_formatted = format_news_body(body)
     body_paragraphs = body_formatted.split('\n\n')
@@ -769,20 +929,27 @@ def build_caption_fit(title, body, emoji, max_len=1024):
     current_len = 0
     for para in body_paragraphs:
         para_plain = strip_html_tags(para)
-        if current_len + len(para_plain) + 2 <= available:
+        sep_len = 2 if chosen else 0
+        para_len = telegram_len(para_plain)
+        if current_len + para_len + sep_len <= available:
             chosen.append(para)
-            current_len += len(para_plain) + 2
+            current_len += para_len + sep_len
         else:
-            remaining = available - current_len
+            remaining = available - current_len - sep_len
             if remaining > 20:
-                truncated_para = truncate_by_words(para_plain, remaining)
-                chosen.append(truncated_para)
+                truncated_para = truncate_to_full_sentences(para_plain, remaining)
+                if truncated_para:
+                    chosen.append(truncated_para)
             break
 
     truncated_body = '\n\n'.join(chosen)
     return f"{emoji} <b>{escape_html(title)}</b>\n{separator_plain}\n{truncated_body}\n\n🏷️ {tags_str}"
 
 def send_post(title, body, link, image_url, video_url, is_youtube):
+    # Чистим заголовок от дублей
+    title = clean_duplicate_title(title)
+    body = clean_shikimori_links(body)
+    
     if video_url and is_youtube:
         emoji = '🎬'
     elif video_url and not is_youtube:
@@ -792,33 +959,40 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
     else:
         emoji = '📄'
 
-    title, body = rewrite_news(title, body)
+    has_media = bool(image_url) or bool(video_url and not is_youtube)
+    max_len_for_post = 1024 if has_media else 4096
+    shell_reserve = telegram_len(title) + 90
+    target_len = max(150, max_len_for_post - shell_reserve)
 
-    if video_url or image_url:
-        full_message = build_caption_fit(title, body, emoji, 1024)
-    else:
-        full_message = build_post_html(title, body, emoji)
+    print(f"[DEBUG] Текст ДО рерайта: {telegram_len(body)} символов, целевая длина: {target_len}")
+    title, body = rewrite_news(title, body, target_len=target_len)
+    print(f"[DEBUG] Текст ПОСЛЕ рерайта: {telegram_len(body)} символов")
+
+    full_message_long = build_post_html(title, body, emoji)
+    caption_message = None
+    def get_caption():
+        nonlocal caption_message
+        if caption_message is None:
+            caption_message = build_caption_fit(title, body, emoji, max_len=1024)
+            print(f"[DEBUG] Итоговая подпись (caption): {telegram_len(caption_message)} символов")
+        return caption_message
 
     if video_url and not is_youtube:
         try:
-            bot.send_video(CHANNEL_ID, video_url, caption=full_message[:1024], parse_mode='HTML')
+            bot.send_video(CHANNEL_ID, video_url, caption=get_caption(), parse_mode='HTML')
             return
         except Exception as e:
             print(f"Не удалось отправить видео: {e}")
+            bot.send_message(CHANNEL_ID, full_message_long[:4096], parse_mode='HTML',
+                              disable_web_page_preview=True)
+            return
 
     if video_url and is_youtube:
-        video_file = download_youtube_video(video_url)
-        if video_file:
-            try:
-                bot.send_video(CHANNEL_ID, video_file, caption=full_message[:1024], parse_mode='HTML')
-                return
-            except Exception as e:
-                print(f"Не удалось отправить скачанное видео: {e}")
-
         short_url = to_short_youtube_url(video_url)
+        message_with_link = f"{full_message_long}\n\nСмотреть: {short_url}"
         bot.send_message(
             CHANNEL_ID,
-            full_message + f"\n\nСмотреть: {short_url}",
+            message_with_link[:4096],
             parse_mode='HTML',
             disable_web_page_preview=False
         )
@@ -828,13 +1002,14 @@ def send_post(title, body, link, image_url, video_url, is_youtube):
         image_file = download_image(image_url, referer=link)
         if image_file:
             try:
-                bot.send_photo(CHANNEL_ID, image_file, caption=full_message[:1024], parse_mode='HTML')
+                bot.send_photo(CHANNEL_ID, image_file, caption=get_caption(), parse_mode='HTML')
                 return
             except Exception as e:
                 print(f"Не удалось отправить фото: {e}")
 
-    bot.send_message(CHANNEL_ID, full_message, parse_mode='HTML', disable_web_page_preview=True)
+    bot.send_message(CHANNEL_ID, full_message_long[:4096], parse_mode='HTML', disable_web_page_preview=True)
 
+# ---------- ФУНКЦИЯ ДЛЯ ПАРСИНГА SHIKIMORI ----------
 def fetch_shikimori_news_from_main_page():
     soup = get_page_soup(SHIKIMORI_MAIN)
     if not soup:
@@ -881,6 +1056,7 @@ def fetch_shikimori_news_from_main_page():
 
     return news_items
 
+# ---------- ОСНОВНАЯ ФУНКЦИЯ ----------
 def main():
     links, titles = load_posted()
     recent_titles = load_recent_titles()
@@ -898,11 +1074,12 @@ def main():
         soup = get_page_soup(link)
         full_text = fetch_full_text({'link': link, 'title': title})
 
-        # Убираем дублирование: заголовок = первое предложение, остальное = тело
         if full_text:
+            full_text = collapse_repeated_phrases(full_text)
+            full_text = clean_shikimori_links(full_text)
             sentences = re.split(r'(?<=[.!?])\s+', full_text.strip())
             if sentences:
-                title = sentences[0]
+                title = normalize_whitespace(sentences[0])
                 full_text = ' '.join(sentences[1:])
             full_text = remove_duplicate_start(title, full_text)
 
