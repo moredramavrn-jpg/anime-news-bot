@@ -17,7 +17,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests pyTelegramBotAPI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install requests pyTelegramBotAPI
 
       - name: Run anime_quiz.py
         env:
@@ -25,3 +28,11 @@ jobs:
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
           GIGACHAT_AUTHORIZATION_KEY: ${{ secrets.GIGACHAT_AUTHORIZATION_KEY }}
         run: python anime_quiz.py
+
+      - name: Commit and push state
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add last_quiz_type.txt last_media_type.txt
+          git diff --quiet && git diff --staged --quiet || git commit -m "Авто-сохранение памяти бота"
+          git push
