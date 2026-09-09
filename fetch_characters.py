@@ -2,7 +2,7 @@ import requests
 import os
 
 CHARACTERS_FILE = "characters.txt"
-LIMIT = 100  # сколько персонажей сохранить
+LIMIT = 300  # сколько персонажей сохранить
 
 ANILIST_API = "https://graphql.anilist.co"
 
