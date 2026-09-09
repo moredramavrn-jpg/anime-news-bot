@@ -16,15 +16,15 @@ NEW_LIMIT = 50
 TOTAL_PAGES = 100
 LIMIT_PER_PAGE = 50
 
-# Из списка исключений убраны "фильм", "movie" и "спин-офф" для расширения базы
+# ЖЕСТКИЙ ФИЛЬТР: возвращаем фильмы, спин-оффы и спешлы в черный список
 BAD_SUBSTRINGS = [
-    "спецвыпуск", "специальный", "сезон", "часть", "ova", "ona",
-    "дополнение", "эпизод", "продолжение", "заключительная",
-    "special", "season", "part", "episode", "final", "решающая игра"
+    "спецвыпуск", "специальный", "фильм", "сезон", "часть", "ova", "ona",
+    "спин-офф", "дополнение", "эпизод", "продолжение", "заключительная",
+    "special", "movie", "season", "part", "episode", "final", "решающая игра"
 ]
 
 HEADERS = {
-    "User-Agent": "AnimeTopFetcher/2.0",
+    "User-Agent": "AnimeTopFetcher/3.0",
     "Accept": "application/json",
     "Content-Type": "application/json"
 }
@@ -112,7 +112,7 @@ def fetch_shikimori_released(total_pages=TOTAL_PAGES, limit=LIMIT_PER_PAGE, excl
     url = "https://shikimori.one/api/animes"
     params = {
         "order": "ranked",
-        "kind": "tv,movie,ova,ona,special",
+        "kind": "tv", # СТРОГО ТВ-СЕРИАЛЫ
         "status": "released",
         "rating": "g,pg,pg_13,r,r_plus",
         "limit": limit,
@@ -145,9 +145,10 @@ def fetch_shikimori_released(total_pages=TOTAL_PAGES, limit=LIMIT_PER_PAGE, excl
     return names
 
 def fetch_popular_candidates_graphql(limit=NEW_LIMIT, pages=10):
+    # Добавили kind: "tv" обратно в GraphQL запрос
     query = """
     query ($page: Int, $limit: Int) {
-      animes(page: $page, limit: $limit, order: popularity, status: "released") {
+      animes(page: $page, limit: $limit, order: popularity, kind: "tv", status: "released") {
         name
         russian
         english
