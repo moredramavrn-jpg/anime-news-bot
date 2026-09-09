@@ -20,7 +20,7 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install feedparser pyTelegramBotAPI requests beautifulsoup4 lxml yt-dlp
+          pip install feedparser pyTelegramBotAPI requests beautifulsoup4 lxml
       - name: Run bot
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
