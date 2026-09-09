@@ -10,8 +10,8 @@ POPULAR_ANIME_FILE = "popular_anime.txt"
 EXCLUDE_FILE = "exclude.txt"
 
 # Увеличенные лимиты для масштабного сбора
-MAX_ANIME = 5000
-TARGET_POPULAR = 500
+MAX_ANIME = 2000
+TARGET_POPULAR = 200
 NEW_LIMIT = 50
 TOTAL_PAGES = 100
 LIMIT_PER_PAGE = 50
