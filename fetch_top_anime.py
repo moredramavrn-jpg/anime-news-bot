@@ -8,20 +8,23 @@ from urllib3.util.retry import Retry
 TOP_ANIME_FILE = "top_anime.txt"
 POPULAR_ANIME_FILE = "popular_anime.txt"
 EXCLUDE_FILE = "exclude.txt"
-MAX_ANIME = 2000
-TARGET_POPULAR = 100
+
+# Увеличенные лимиты для масштабного сбора
+MAX_ANIME = 5000
+TARGET_POPULAR = 500
 NEW_LIMIT = 50
-TOTAL_PAGES = 80
+TOTAL_PAGES = 100
 LIMIT_PER_PAGE = 50
 
+# Из списка исключений убраны "фильм", "movie" и "спин-офф" для расширения базы
 BAD_SUBSTRINGS = [
-    "спецвыпуск", "специальный", "фильм", "сезон", "часть", "ova", "ona",
-    "спин-офф", "дополнение", "эпизод", "продолжение", "заключительная",
-    "special", "movie", "season", "part", "episode", "final", "решающая игра"
+    "спецвыпуск", "специальный", "сезон", "часть", "ova", "ona",
+    "дополнение", "эпизод", "продолжение", "заключительная",
+    "special", "season", "part", "episode", "final", "решающая игра"
 ]
 
 HEADERS = {
-    "User-Agent": "AnimeTopFetcher/1.0",   # имя приложения, как требует Shikimori
+    "User-Agent": "AnimeTopFetcher/2.0",
     "Accept": "application/json",
     "Content-Type": "application/json"
 }
@@ -58,7 +61,6 @@ def load_exclude_list():
     return exclude
 
 def clean_title(title, exclude_set=None):
-    """Очищает название, убирая сезоны, спецвыпуски и т.п."""
     if not title:
         return None
 
@@ -105,7 +107,6 @@ def clean_title(title, exclude_set=None):
     return ' '.join(title.split())
 
 def fetch_shikimori_released(total_pages=TOTAL_PAGES, limit=LIMIT_PER_PAGE, exclude_set=None):
-    """Собирает полный список завершённых аниме через REST API Shikimori."""
     names = []
     session = requests_retry_session()
     url = "https://shikimori.one/api/animes"
@@ -143,56 +144,62 @@ def fetch_shikimori_released(total_pages=TOTAL_PAGES, limit=LIMIT_PER_PAGE, excl
             continue
     return names
 
-def fetch_popular_candidates_graphql(limit=NEW_LIMIT):
-    """Получает свежие популярные завершённые TV-аниме через GraphQL."""
+def fetch_popular_candidates_graphql(limit=NEW_LIMIT, pages=10):
     query = """
     query ($page: Int, $limit: Int) {
-      animes(page: $page, limit: $limit, order: popularity, kind: "tv", status: "released") {
+      animes(page: $page, limit: $limit, order: popularity, status: "released") {
         name
         russian
         english
       }
     }
     """
-    variables = {
-        "page": 1,
-        "limit": limit
-    }
-
+    
     names = []
-    try:
-        session = requests_retry_session()
-        response = session.post(
-            GRAPHQL_URL,
-            json={"query": query, "variables": variables},
-            headers=HEADERS,
-            timeout=20
-        )
-        response.raise_for_status()
-        data = response.json()
-        if "errors" in data:
-            print(f"Ошибки GraphQL: {data['errors']}")
-            return []
+    session = requests_retry_session()
+    
+    for page in range(1, pages + 1):
+        variables = {
+            "page": page,
+            "limit": limit
+        }
+        try:
+            response = session.post(
+                GRAPHQL_URL,
+                json={"query": query, "variables": variables},
+                headers=HEADERS,
+                timeout=20
+            )
+            response.raise_for_status()
+            data = response.json()
+            if "errors" in data:
+                print(f"Ошибки GraphQL на странице {page}: {data['errors']}")
+                continue
 
-        animes = data.get("data", {}).get("animes", [])
-        for anime in animes:
-            name = anime.get("russian") or anime.get("english") or anime.get("name")
-            name = clean_title(name)
-            if name:
-                names.append(name)
-    except Exception as e:
-        print(f"Ошибка получения популярных с Shikimori GraphQL: {e}")
+            animes = data.get("data", {}).get("animes", [])
+            if not animes:
+                break
+                
+            for anime in animes:
+                name = anime.get("russian") or anime.get("english") or anime.get("name")
+                name = clean_title(name)
+                if name:
+                    names.append(name)
+            
+            print(f"GraphQL: получена страница {page} популярных тайтлов")
+            time.sleep(1)
+        except Exception as e:
+            print(f"Ошибка получения популярных с Shikimori GraphQL на странице {page}: {e}")
+            
     return names
 
 def load_existing_popular():
-    """Читает текущий popular_anime.txt (сохраняет порядок)."""
     if not os.path.exists(POPULAR_ANIME_FILE):
         return []
     with open(POPULAR_ANIME_FILE, 'r', encoding='utf-8') as f:
         return [line.strip() for line in f if line.strip()]
 
 def save_top_anime(names):
-    """Сохраняет полный список в top_anime.txt."""
     unique = []
     seen = set()
     for name in names:
@@ -209,7 +216,6 @@ def save_top_anime(names):
     print(f"Сохранено {len(unique)} аниме в {TOP_ANIME_FILE}")
 
 def update_popular_anime(existing_popular, popular_candidates, target=TARGET_POPULAR):
-    """Дополняет popular_anime.txt новыми названиями, сохраняя существующие."""
     existing_set = {name.lower() for name in existing_popular}
     added = []
     for name in popular_candidates:
@@ -238,7 +244,7 @@ def main():
     existing_popular = load_existing_popular()
     print(f"Текущий популярный список: {len(existing_popular)} названий")
 
-    popular_candidates = fetch_popular_candidates_graphql(limit=NEW_LIMIT)
+    popular_candidates = fetch_popular_candidates_graphql(limit=NEW_LIMIT, pages=10)
     print(f"Получено кандидатов для пополнения: {len(popular_candidates)}")
 
     update_popular_anime(existing_popular, popular_candidates, target=TARGET_POPULAR)
