@@ -2,6 +2,7 @@ name: Anime Quiz
 
 on:
   workflow_dispatch:
+  # Если у тебя тут была строка расписания (schedule/cron), можешь вернуть её сюда
 
 permissions:
   contents: write
@@ -16,11 +17,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          pip install requests pyTelegramBotAPI
+      # Быстрая установка ffmpeg за пару секунд
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+
+      - name: Install Python dependencies
+        run: pip install requests pyTelegramBotAPI
 
       - name: Run anime_quiz.py
         env:
