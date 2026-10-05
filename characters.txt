@@ -11,21 +11,21 @@ Ken Kaneki|Tokyo Ghoul|https://s4.anilist.co/file/anilistcdn/character/large/b87
 Mikasa Ackerman|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b40881-F3gr1PkreDvj.png
 Arataka Reigen|Mob Psycho 100|https://s4.anilist.co/file/anilistcdn/character/large/b89334-OPj1hCzvrt7X.png
 Guts|Berserk|https://s4.anilist.co/file/anilistcdn/character/large/b422-XTaiTuvRohsV.png
-Frieren|Frieren: Beyond Journey’s End|https://s4.anilist.co/file/anilistcdn/character/large/b176754-PCnpqIOkjhFk.png
 Maomao|The Apothecary Diaries|https://s4.anilist.co/file/anilistcdn/character/large/b126824-MqsCncTO1qpv.png
+Frieren|Frieren: Beyond Journey’s End|https://s4.anilist.co/file/anilistcdn/character/large/b176754-PCnpqIOkjhFk.png
 Kurisu Makise|Steins;Gate|https://s4.anilist.co/file/anilistcdn/character/large/b34470-Jw2LXZBL5R8i.png
 Thorfinn Karlsefni|Vinland Saga|https://s4.anilist.co/file/anilistcdn/character/large/b10138-zOPrka0ddZOR.png
 Makima|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b137080-UHcynYNjb5ZU.png
 Itachi Uchiha|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b14-9Kb1E5oel1ke.png
-Yuuji Itadori|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b127212-FVm2tD0erQ5B.png
 Rintarou Okabe|Steins;Gate|https://s4.anilist.co/file/anilistcdn/character/large/b35252-DY9TW6pusqeh.png
 Mai Sakurajima|Rascal Does Not Dream of Bunny Girl Senpai|https://s4.anilist.co/file/anilistcdn/character/large/b127222-Jh5hhP7vZ7s1.png
+Yuuji Itadori|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b127212-FVm2tD0erQ5B.png
 Denji|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b130102-FO1VHNnEnLlB.png
 Kurapika|Hunter x Hunter (2011)|https://s4.anilist.co/file/anilistcdn/character/large/b28-ivA7UGnfE40a.png
 Shigeo Kageyama|Mob Psycho 100|https://s4.anilist.co/file/anilistcdn/character/large/b89616-dXmdOc7L6SDi.png
-Power|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b137079-6yLEUYR3bmpr.png
 Kaguya Shinomiya|Kaguya-sama: Love is War|https://s4.anilist.co/file/anilistcdn/character/large/b120649-NPaWaIpWy60E.png
 Kakashi Hatake|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b85-mkVBh2yjxjmx.png
+Power|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b137079-6yLEUYR3bmpr.png
 Violet Evergarden|Violet Evergarden|https://s4.anilist.co/file/anilistcdn/character/large/b90169-4wr1Zehnsac8.png
 Light Yagami|Death Note|https://s4.anilist.co/file/anilistcdn/character/large/b80-26EhwSsSqQ50.png
 Edward Elric|Fullmetal Alchemist: Brotherhood|https://s4.anilist.co/file/anilistcdn/character/large/b11-TA5Nuk7EDUZG.jpg
@@ -38,12 +38,12 @@ Joseph Joestar|JoJo's Bizarre Adventure (TV)|https://s4.anilist.co/file/anilistc
 Shouto Todoroki|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89220-KNBwaVFAR8FD.png
 Megumin|KONOSUBA -God's blessing on this wonderful world!|https://s4.anilist.co/file/anilistcdn/character/large/b89361-tq8PQQ4MmF0M.png
 Askeladd|Vinland Saga|https://s4.anilist.co/file/anilistcdn/character/large/b13020-ZdiYlNmpRUNS.png
-Osamu Dazai|Bungo Stray Dogs|https://s4.anilist.co/file/anilistcdn/character/large/b89198-qKmRTw4Y3PRC.png
 Rem|Re:ZERO -Starting Life in Another World-|https://s4.anilist.co/file/anilistcdn/character/large/b88575-Ayu8UPDA8NS6.png
+Osamu Dazai|Bungo Stray Dogs|https://s4.anilist.co/file/anilistcdn/character/large/b89198-qKmRTw4Y3PRC.png
 Katsuki Bakugou|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b88892-bdOha3lNcaN6.png
 Chika Fujiwara|Kaguya-sama: Love is War|https://s4.anilist.co/file/anilistcdn/character/large/b121103-UGLxT8utLPnq.png
-Gintoki Sakata|Gintama|https://s4.anilist.co/file/anilistcdn/character/large/b672-cP5VPriN67xJ.png
 Itsuki Nakano|The Quintessential Quintuplets|https://s4.anilist.co/file/anilistcdn/character/large/b126375-dEe9IyQ9By09.png
+Gintoki Sakata|Gintama|https://s4.anilist.co/file/anilistcdn/character/large/b672-cP5VPriN67xJ.png
 Kiyotaka Ayanokouji|Classroom of the Elite|https://s4.anilist.co/file/anilistcdn/character/large/b123212-ewZgUQr9vvEM.png
 Ichigo|DARLING in the FRANXX|https://s4.anilist.co/file/anilistcdn/character/large/b124382-bSBkjtYjJQtr.png
 Subaru Natsuki|Re:ZERO -Starting Life in Another World-|https://s4.anilist.co/file/anilistcdn/character/large/b88573-F8yMTK9GhnTA.png
@@ -54,13 +54,13 @@ Jin-U Seong|Solo Leveling|https://s4.anilist.co/file/anilistcdn/character/large/
 Miko Iino|Kaguya-sama: Love is War|https://s4.anilist.co/file/anilistcdn/character/large/b125886-TQbmqAaSgBLS.png
 Saitama|One-Punch Man|https://s4.anilist.co/file/anilistcdn/character/large/b73935-ON5d0mAcrItd.jpg
 Robin Nico|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b61-ywXUyyocEEqt.png
-Izumi Miyamura|Horimiya|https://s4.anilist.co/file/anilistcdn/character/large/b66173-g8eU1LGWPB8O.png
 Hitagi Senjougahara|Bakemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/b22037-sY7GWSKYr2Nl.jpg
+Izumi Miyamura|Horimiya|https://s4.anilist.co/file/anilistcdn/character/large/b66173-g8eU1LGWPB8O.png
+Zero Two|DARLING in the FRANXX|https://s4.anilist.co/file/anilistcdn/character/large/b124381-2gAVq76HPfL2.png
 Kusuo Saiki|Assassination Classroom Second Season|https://s4.anilist.co/file/anilistcdn/character/large/b90107-ZULW5HlPX1uU.png
 Aki Hayakawa|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b137081-TSrUR3mUJL6r.png
-Zero Two|DARLING in the FRANXX|https://s4.anilist.co/file/anilistcdn/character/large/b124381-2gAVq76HPfL2.png
-Yuu Ishigami|Kaguya-sama: Love is War|https://s4.anilist.co/file/anilistcdn/character/large/b121102-tiQFxnSEIAwm.png
 Asuka Langley Souryuu|Neon Genesis Evangelion|https://s4.anilist.co/file/anilistcdn/character/large/b94-d631a3Z2KPvd.png
+Yuu Ishigami|Kaguya-sama: Love is War|https://s4.anilist.co/file/anilistcdn/character/large/b121102-tiQFxnSEIAwm.png
 Shouyou Hinata|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b64769-WoWlCMLLgJ14.png
 Inosuke Hashibira|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/n129130-SJC0Kn1DU39E.jpg
 Nezuko Kamado|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b127518-NRlq1CQ1v1ro.png
@@ -73,31 +73,31 @@ Hisoka Morow|Hunter x Hunter (2011)|https://s4.anilist.co/file/anilistcdn/charac
 Armin Arlert|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b46494-g7xYYuBtYPnO.png
 Izuku Midoriya|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89028-8w1I9o1ISHMg.png
 Shinobu Oshino|Bakemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/b23602-Z4MDNYcoAWZu.png
-Hange Zoe|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b71121-7R7CnQd3lHgt.png
 Rimuru Tempest|That Time I Got Reincarnated as a Slime|https://s4.anilist.co/file/anilistcdn/character/large/b123962-eL9yGV0NLMF7.png
+Hange Zoe|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b71121-7R7CnQd3lHgt.png
 Zenitsu Agatsuma|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b129131-FZrQ7lSlxmEr.png
 Kento Nanami|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b133704-8wLTGjc234q2.png
 Nobara Kugisaki|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b133700-f6sOO3TcgLV6.png
 Anya Forger|SPY x FAMILY|https://s4.anilist.co/file/anilistcdn/character/large/b138100-4Li0tWRCa5bQ.png
-Maki Zenin|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b134167-5TCytk45YByD.png
 Sasuke Uchiha|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b13-SISLEw1oAD7a.png
+Maki Zenin|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b134167-5TCytk45YByD.png
 Erwin Smith|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b46496-Mu86MENd5wNB.png
 Yato|Noragami|https://s4.anilist.co/file/anilistcdn/character/large/b84677-PFmohzIXD1ud.png
 Rin Toosaka|Fate/Zero|https://s4.anilist.co/file/anilistcdn/character/large/b498-lwawtSpLyATL.png
 Hachiman Hikigaya|My Teen Romantic Comedy SNAFU|https://s4.anilist.co/file/anilistcdn/character/large/b67065-Dhec6tE2yWA9.png
 Koyomi Araragi|Bakemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/b22036-Ed3CjwPlDLp4.png
 Tobio Kageyama|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b64771-BuCVs7B8bBdh.png
-Giyuu Tomioka|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b130050-qsLThJs5VIbz.png
 Hitori Gotou|BOCCHI THE ROCK!|https://s4.anilist.co/file/anilistcdn/character/large/b257562-Ru35NYPfsqhY.png
+Giyuu Tomioka|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b130050-qsLThJs5VIbz.png
 Homura Akemi|Puella Magi Madoka Magica|https://s4.anilist.co/file/anilistcdn/character/large/b38005-T3NR8p2f021x.jpg
 Artoria Pendragon|Fate/Zero|https://s4.anilist.co/file/anilistcdn/character/large/b497-Yg5pNmC8kxzs.png
 Miku Nakano|The Quintessential Quintuplets|https://s4.anilist.co/file/anilistcdn/character/large/b126373-CWeyXb822uDN.png
-Sukuna|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b133701-rCQuDpHr3UZL.png
 Kyouko Hori|Horimiya|https://s4.anilist.co/file/anilistcdn/character/large/b66171-o2vk3689wWFK.png
+Sukuna|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b133701-rCQuDpHr3UZL.png
 Kana Arima|OSHI NO KO|https://s4.anilist.co/file/anilistcdn/character/large/b188783-77orwP7vNuNg.png
 Yuuta Okkotsu|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b129571-GHJk7gviHOOw.jpg
-Shouko Nishimiya|A Silent Voice|https://s4.anilist.co/file/anilistcdn/character/large/b80243-RzxE51iUU5eq.png
 Roxy Migurdia|Mushoku Tensei: Jobless Reincarnation|https://s4.anilist.co/file/anilistcdn/character/large/b88350-QU1iwgZ887U8.png
+Shouko Nishimiya|A Silent Voice|https://s4.anilist.co/file/anilistcdn/character/large/b80243-RzxE51iUU5eq.png
 Rei Ayanami|Neon Genesis Evangelion|https://s4.anilist.co/file/anilistcdn/character/large/86-cA1zL7fyls8E.jpg
 Kyoujurou Rengoku|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b129133-VlTPowwt68rJ.png
 Shinji Ikari|Neon Genesis Evangelion|https://s4.anilist.co/file/anilistcdn/character/large/b89-ZtZhXkh1rITn.png
@@ -112,8 +112,8 @@ Sakuta Azusagawa|Rascal Does Not Dream of Bunny Girl Senpai|https://s4.anilist.c
 Yuu Nishinoya|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b67327-zQb1dlC7joPb.jpg
 Karma Akabane|Assassination Classroom|https://s4.anilist.co/file/anilistcdn/character/large/b71933-HQ1TSjlrJ8Hv.jpg
 Kyou Souma|Fruits Basket (2019)|https://s4.anilist.co/file/anilistcdn/character/large/b209-NOAbiLvJt1QA.png
-Law Trafalgar|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b13767-U604OJN9dxCn.jpg
 Reze|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b148740-ceAibPxLW8rR.png
+Law Trafalgar|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b13767-U604OJN9dxCn.jpg
 Nami|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b723-vp5hPptgnNEC.png
 Vladilena Milizé|86 EIGHTY-SIX|https://s4.anilist.co/file/anilistcdn/character/large/b141061-jqIhB9jmClQ3.png
 Asuna Yuuki|Sword Art Online|https://s4.anilist.co/file/anilistcdn/character/large/b36828-j5ib0adAzGMx.png
@@ -124,9 +124,9 @@ Gyro Zeppeli|STEEL BALL RUN JoJo's Bizarre Adventure 1st STAGE|https://s4.anilis
 Yukino Yukinoshita|My Teen Romantic Comedy SNAFU|https://s4.anilist.co/file/anilistcdn/character/large/b67067-gqhgjlni0Bcf.png
 Ray|The Promised Neverland|https://s4.anilist.co/file/anilistcdn/character/large/b121724-SJTdODjeO7e6.jpg
 Toge Inumaki|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b157115-kdhRYQdVhH95.png
-Musashi Miyamoto||https://s4.anilist.co/file/anilistcdn/character/large/b6194-HOyr8E7FCFHJ.png
 Kenma Kozume|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b71267-q44J2MXMinXD.jpg
 Kurena Kukumila|86 EIGHTY-SIX|https://s4.anilist.co/file/anilistcdn/character/large/b174873-FNf08aPYTVXY.jpg
+Musashi Miyamoto||https://s4.anilist.co/file/anilistcdn/character/large/b6194-HOyr8E7FCFHJ.png
 Mami Nanami|Rent-a-Girlfriend|https://s4.anilist.co/file/anilistcdn/character/large/b154224-7dJ09BKEnG3v.png
 Koro-sensei|Assassination Classroom|https://s4.anilist.co/file/anilistcdn/character/large/b65643-jimrOw0RGtoB.png
 Gokuu Son|Dragon Ball Z|https://s4.anilist.co/file/anilistcdn/character/large/246-wsRRr6z1kii8.png
@@ -152,15 +152,15 @@ Chopper Tony Tony|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/larg
 Yumeko Jabami|Kakegurui|https://s4.anilist.co/file/anilistcdn/character/large/b121889-ABsurpy5SjOW.png
 Jousuke Higashikata|JoJo's Bizarre Adventure: Diamond is Unbreakable|https://s4.anilist.co/file/anilistcdn/character/large/b13085-CkmgXL7SSLxL.jpg
 Fern|Frieren: Beyond Journey’s End|https://s4.anilist.co/file/anilistcdn/character/large/b183965-uGFohBjlFoTp.png
-Hanako|Toilet-bound Hanako-kun|https://s4.anilist.co/file/anilistcdn/character/large/b128651-GaZImkP2Of1R.png
 Kenzou Tenma|Monster|https://s4.anilist.co/file/anilistcdn/character/large/b718-b6ZZVp822lw0.png
+Hanako|Toilet-bound Hanako-kun|https://s4.anilist.co/file/anilistcdn/character/large/b128651-GaZImkP2Of1R.png
 Rudeus Greyrat|Mushoku Tensei: Jobless Reincarnation|https://s4.anilist.co/file/anilistcdn/character/large/b88348-bIe5XnXdRpmX.png
 Yoshikage Kira|JoJo's Bizarre Adventure: Diamond is Unbreakable|https://s4.anilist.co/file/anilistcdn/character/large/b12055-eCEkIVV4qoCu.png
 Howl|Howl‘s Moving Castle|https://s4.anilist.co/file/anilistcdn/character/large/b507-g9yz1GTLtPla.jpg
-Taiga Aisaka|Toradora!|https://s4.anilist.co/file/anilistcdn/character/large/b12064-7PDN3ylIeAZn.png
 Shikamaru Nara|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b2007-QaesJlIZDifj.jpg
-Griffith|Berserk|https://s4.anilist.co/file/anilistcdn/character/large/b424-Jfrsf8I7zBps.png
+Taiga Aisaka|Toradora!|https://s4.anilist.co/file/anilistcdn/character/large/b12064-7PDN3ylIeAZn.png
 Kisuke Urahara|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b210-mw01NrQfRjzT.png
+Griffith|Berserk|https://s4.anilist.co/file/anilistcdn/character/large/b424-Jfrsf8I7zBps.png
 Touka Kirishima|Tokyo Ghoul|https://s4.anilist.co/file/anilistcdn/character/large/b87277-oUaqrI1iBzu6.png
 Aqua|KONOSUBA -God's blessing on this wonderful world!|https://s4.anilist.co/file/anilistcdn/character/large/b89362-ibkc0eoECaW1.png
 Suguru Getou|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b133699-FCnXaISgazAi.png
@@ -170,29 +170,29 @@ Sasha Blouse|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/lar
 Simon|Gurren Lagann|https://s4.anilist.co/file/anilistcdn/character/large/b2257-jnalsdnIX1vN.jpg
 Kurumi Tokisaki|Date A Live|https://s4.anilist.co/file/anilistcdn/character/large/b70069-DEV7X6o2L7oG.jpg
 Shouko Komi|Komi Can’t Communicate|https://s4.anilist.co/file/anilistcdn/character/large/b121956-5FbIbcd6gAZW.png
+Lain Iwakura|Serial Experiments Lain|https://s4.anilist.co/file/anilistcdn/character/large/b2219-K3wzEOVwdUhL.png
 Tengen Uzui|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b136071-99Kexnnn2PiV.png
 Kei Tsukishima|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b67329-k7mDdqQ6rJ4w.png
-Lain Iwakura|Serial Experiments Lain|https://s4.anilist.co/file/anilistcdn/character/large/b2219-K3wzEOVwdUhL.png
 Nana Oosaki|NANA|https://s4.anilist.co/file/anilistcdn/character/large/b702-qqO3zbj5hp1l.png
 Shinei Nouzen|86 EIGHTY-SIX|https://s4.anilist.co/file/anilistcdn/character/large/b141060-ZJFvHqBBSvhN.png
-Jolyne Kuujou|JoJo's Bizarre Adventure: STONE OCEAN|https://s4.anilist.co/file/anilistcdn/character/large/b11222-Se9QoJHDSeYY.png
 Rikka Takanashi|Love, Chunibyo & Other Delusions|https://s4.anilist.co/file/anilistcdn/character/large/b65865-AC0ru7cDXUgK.png
+Jolyne Kuujou|JoJo's Bizarre Adventure: STONE OCEAN|https://s4.anilist.co/file/anilistcdn/character/large/b11222-Se9QoJHDSeYY.png
 Tsubasa Hanekawa|Bakemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/b22055-EaTsy30ihdgb.png
 Touji Fushiguro|JUJUTSU KAISEN Season 2|https://s4.anilist.co/file/anilistcdn/character/large/b162722-btzdghBizxKS.jpg
-Gilgamesh|Fate/Zero|https://s4.anilist.co/file/anilistcdn/character/large/b2514-hnE6LEdqm7Su.png
 Reiner Braun|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b46484-P6A2GjNQn49F.png
+Gilgamesh|Fate/Zero|https://s4.anilist.co/file/anilistcdn/character/large/b2514-hnE6LEdqm7Su.png
 Ban|The Seven Deadly Sins|https://s4.anilist.co/file/anilistcdn/character/large/b77605-NrjhQwZwgJ3l.png
-Eikichi Onizuka|GTO: Great Teacher Onizuka|https://s4.anilist.co/file/anilistcdn/character/large/b434-Q0K9e4HukawA.png
+Eris Boreas Greyrat|Mushoku Tensei: Jobless Reincarnation|https://s4.anilist.co/file/anilistcdn/character/large/b88349-5dsNUah3oBj8.png
 Rukia Kuchiki|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b6-25WoBeWMZXBc.png
-Ranpo Edogawa|Bungo Stray Dogs|https://s4.anilist.co/file/anilistcdn/character/large/b89201-K0X5HNq88Oub.png
+Eikichi Onizuka|GTO: Great Teacher Onizuka|https://s4.anilist.co/file/anilistcdn/character/large/b434-Q0K9e4HukawA.png
 Momo Ayase|DAN DA DAN|https://s4.anilist.co/file/anilistcdn/character/large/b222594-24Jn7qlI5spH.png
+Ranpo Edogawa|Bungo Stray Dogs|https://s4.anilist.co/file/anilistcdn/character/large/b89201-K0X5HNq88Oub.png
 Johnny Joestar|STEEL BALL RUN JoJo's Bizarre Adventure 1st STAGE|https://s4.anilist.co/file/anilistcdn/character/large/b19492-gvMnKxhUhT9V.jpg
 Vegeta|Dragon Ball Z|https://s4.anilist.co/file/anilistcdn/character/large/b913-NIFkKazWM8VO.png
 Juuzou Suzuya|Tokyo Ghoul|https://s4.anilist.co/file/anilistcdn/character/large/b88412-sIOJUnIkyFRe.png
 Alphonse Elric|Fullmetal Alchemist: Brotherhood|https://s4.anilist.co/file/anilistcdn/character/large/b12-tCKu8yK5kFL5.jpg
-Eris Boreas Greyrat|Mushoku Tensei: Jobless Reincarnation|https://s4.anilist.co/file/anilistcdn/character/large/b88349-5dsNUah3oBj8.png
-Aoi Toudou|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b137975-6TH7PiLWJaqy.png
 Gaara|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b1662-4E5J0LX9jZKZ.png
+Aoi Toudou|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b137975-6TH7PiLWJaqy.png
 Houtarou Oreki|Hyouka|https://s4.anilist.co/file/anilistcdn/character/large/b55131-ypodHQCyHbzD.png
 Chisato Nishikigi|Lycoris Recoil|https://s4.anilist.co/file/anilistcdn/character/large/b260329-1Z5n1QgViEBI.png
 Erza Scarlet|Fairy Tail|https://s4.anilist.co/file/anilistcdn/character/large/b5189-GR1xdok9SFsN.jpg
@@ -202,44 +202,44 @@ Yoruichi Shihouin|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b
 Chifuyu Matsuno|Tokyo Revengers|https://s4.anilist.co/file/anilistcdn/character/large/b145344-q4BqRljEBYNc.png
 Sousuke Aizen|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b1086-qR9218BjZTC0.png
 Akame|Akame ga Kill!|https://s4.anilist.co/file/anilistcdn/character/large/b63351-0WmsDENpiscp.png
-Ken Ryuuguji|Tokyo Revengers|https://s4.anilist.co/file/anilistcdn/character/large/b145345-zyirrSsKIDCb.png
-Souma Yukihira|Food Wars!|https://s4.anilist.co/file/anilistcdn/character/large/b75216-KDU8333eIcqf.jpg
 Cid Kagenou|The Eminence in Shadow|https://s4.anilist.co/file/anilistcdn/character/large/b136837-3WR22FYet8Hv.jpg
 Misa Amane|Death Note|https://s4.anilist.co/file/anilistcdn/character/large/b835-CiZa8y2z2gCz.png
+Ken Ryuuguji|Tokyo Revengers|https://s4.anilist.co/file/anilistcdn/character/large/b145345-zyirrSsKIDCb.png
+Souma Yukihira|Food Wars!|https://s4.anilist.co/file/anilistcdn/character/large/b75216-KDU8333eIcqf.jpg
 Wolfgang Grimmer|Monster|https://s4.anilist.co/file/anilistcdn/character/large/b3096-qCXXA8G0J8rk.png
 Koutarou Bokuto|HAIKYU!! 2nd Season|https://s4.anilist.co/file/anilistcdn/character/large/b88937-2GSqkX9TIzYy.png
 Kiritsugu Emiya|Fate/Zero|https://s4.anilist.co/file/anilistcdn/character/large/b10010-fNspzan5MzNk.png
 Nagisa Shiota|Assassination Classroom|https://s4.anilist.co/file/anilistcdn/character/large/b65645-nWH4mBMW5lYw.png
 Toshinori Yagi|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89224-K6KEuQAuYKzq.jpg
 Raphtalia|The Rising of the Shield Hero|https://s4.anilist.co/file/anilistcdn/character/large/b88889-CWYytVbCOPsV.png
-Rohan Kishibe|JoJo's Bizarre Adventure: Diamond is Unbreakable|https://s4.anilist.co/file/anilistcdn/character/large/b12659-hgT3g7q7oHnU.png
 Nazuna Nanakusa|Call of the Night|https://s4.anilist.co/file/anilistcdn/character/large/b168774-zoB9InjmXYq2.png
-Chuuya Nakahara|Bungo Stray Dogs|https://s4.anilist.co/file/anilistcdn/character/large/b89853-06qMPkrGlgP1.png
-Chizuru Ichinose|Rent-a-Girlfriend|https://s4.anilist.co/file/anilistcdn/character/large/b128106-zSTsuULvz6PX.png
+Rohan Kishibe|JoJo's Bizarre Adventure: Diamond is Unbreakable|https://s4.anilist.co/file/anilistcdn/character/large/b12659-hgT3g7q7oHnU.png
 Nijika Ijichi|BOCCHI THE ROCK!|https://s4.anilist.co/file/anilistcdn/character/large/b261674-a8tJYvtzqWgC.png
+Chuuya Nakahara|Bungo Stray Dogs|https://s4.anilist.co/file/anilistcdn/character/large/b89853-06qMPkrGlgP1.png
 Giorno Giovanna|JoJo's Bizarre Adventure: Golden Wind|https://s4.anilist.co/file/anilistcdn/character/large/b10529-AloL8jjZwjsg.png
+Chizuru Ichinose|Rent-a-Girlfriend|https://s4.anilist.co/file/anilistcdn/character/large/b128106-zSTsuULvz6PX.png
 Norman|The Promised Neverland|https://s4.anilist.co/file/anilistcdn/character/large/b121700-CRwKIlcBcjbv.jpg
 Faye Valentine|Cowboy Bebop|https://s4.anilist.co/file/anilistcdn/character/large/b2-0Iszg6Izgt4p.png
-Benimaru Shinmon|Fire Force|https://s4.anilist.co/file/anilistcdn/character/large/b130848-AuuIm6GR8ody.jpg
 Hina Chouno|Blue Box|https://s4.anilist.co/file/anilistcdn/character/large/b218648-kXxXy8lPkeGV.png
+Benimaru Shinmon|Fire Force|https://s4.anilist.co/file/anilistcdn/character/large/b130848-AuuIm6GR8ody.jpg
 Usopp|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b724-GFGgI9AJQkfy.jpg
 Tetsurou Kuroo|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b71269-pi9vjyxKPFAu.jpg
 Bruno Bucciarati|JoJo's Bizarre Adventure: Golden Wind|https://s4.anilist.co/file/anilistcdn/character/large/b13045-TIpIF82cMkG9.png
 Mitsuri Kanroji|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b136072-xVwyRUKdpybi.png
 Esdeath|Akame ga Kill!|https://s4.anilist.co/file/anilistcdn/character/large/b65239-2S3t2vSyUew9.png
-Meguru Bachira|BLUE LOCK|https://s4.anilist.co/file/anilistcdn/character/large/b162213-4czykzdxmWG6.png
 Death the Kid|Soul Eater|https://s4.anilist.co/file/anilistcdn/character/large/b8455-0Ztel4ew5bNd.png
-Rei Kiriyama|March comes in like a lion|https://s4.anilist.co/file/anilistcdn/character/large/b21044-K0pEhdOEmAwG.png
-Garou|One-Punch Man|https://s4.anilist.co/file/anilistcdn/character/large/b89277-xBGb4B5YISXg.png
 Jiraiya|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b2423-RO5MyoXSA9OL.png
+Meguru Bachira|BLUE LOCK|https://s4.anilist.co/file/anilistcdn/character/large/b162213-4czykzdxmWG6.png
+Rei Kiriyama|March comes in like a lion|https://s4.anilist.co/file/anilistcdn/character/large/b21044-K0pEhdOEmAwG.png
 Legoshi|BEASTARS|https://s4.anilist.co/file/anilistcdn/character/large/b125168-cOydxRHEbAYb.png
-Eijirou Kirishima|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89243-R2WJlNuj3aEs.jpg
-Genos|One-Punch Man|https://s4.anilist.co/file/anilistcdn/character/large/b73979-tVi9maPID881.jpg
-Hyakkimaru|Dororo|https://s4.anilist.co/file/anilistcdn/character/large/b14864-MMntDWi2EkyR.png
-Ai Hoshino|OSHI NO KO|https://s4.anilist.co/file/anilistcdn/character/large/b172759-cccVhJ2fQA92.png
 Tanya Degurechaff|Saga of Tanya the Evil|https://s4.anilist.co/file/anilistcdn/character/large/b121052-bQZT3nIvaryX.png
-Leorio Paradinight|Hunter x Hunter (2011)|https://s4.anilist.co/file/anilistcdn/character/large/b29-RgzoSeKmDYzl.jpg
+Garou|One-Punch Man|https://s4.anilist.co/file/anilistcdn/character/large/b89277-xBGb4B5YISXg.png
+Eijirou Kirishima|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89243-R2WJlNuj3aEs.jpg
+Ai Hoshino|OSHI NO KO|https://s4.anilist.co/file/anilistcdn/character/large/b172759-cccVhJ2fQA92.png
+Hyakkimaru|Dororo|https://s4.anilist.co/file/anilistcdn/character/large/b14864-MMntDWi2EkyR.png
+Genos|One-Punch Man|https://s4.anilist.co/file/anilistcdn/character/large/b73979-tVi9maPID881.jpg
 Akane Kurokawa|OSHI NO KO|https://s4.anilist.co/file/anilistcdn/character/large/b203384-YuSppFDMw2wn.png
+Leorio Paradinight|Hunter x Hunter (2011)|https://s4.anilist.co/file/anilistcdn/character/large/b29-RgzoSeKmDYzl.jpg
 Rias Gremory|High School DxD|https://s4.anilist.co/file/anilistcdn/character/large/b50389-gIhJkyk8xj1P.png
 Ryou Yamada|BOCCHI THE ROCK!|https://s4.anilist.co/file/anilistcdn/character/large/b264529-BvEusZnJLD2Y.png
 Chousou|JUJUTSU KAISEN|https://s4.anilist.co/file/anilistcdn/character/large/b157116-2jYQf3y8NeTZ.png
@@ -248,14 +248,14 @@ Deishuu Kaiki|Nisemonogatari|https://s4.anilist.co/file/anilistcdn/character/lar
 Yui Hirasawa|K-ON!|https://s4.anilist.co/file/anilistcdn/character/large/b19565-7gMiEAm7NGNK.png
 Alucard|Hellsing Ultimate|https://s4.anilist.co/file/anilistcdn/character/large/n601-CVySkaFQgsPW.jpg
 Jean Kirstein|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b46498-ritqAj9FW6jX.png
-Kagura|Gintama|https://s4.anilist.co/file/anilistcdn/character/large/b674-w8wCh0A5Qa8R.png
+Minato Namikaze|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b2535-Xq9WKNPJQEt3.png
 Nanachi|Made in Abyss|https://s4.anilist.co/file/anilistcdn/character/large/b122445-5uDu8wMy8Jxi.png
 Seishirou Nagi|BLUE LOCK|https://s4.anilist.co/file/anilistcdn/character/large/b162969-WGnGyVQrFi0X.png
-Minato Namikaze|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b2535-Xq9WKNPJQEt3.png
+Kagura|Gintama|https://s4.anilist.co/file/anilistcdn/character/large/b674-w8wCh0A5Qa8R.png
 Kenpachi Zaraki|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b909-slhoFBon7oiH.jpg
 Mio Akiyama|K-ON!|https://s4.anilist.co/file/anilistcdn/character/large/b19566-XKsMgf370b4m.png
-Himiko Toga|My Hero Academia Season 2|https://s4.anilist.co/file/anilistcdn/character/large/b125619-iQxQoGHJvjRJ.png
 Aira Shiratori|DAN DA DAN|https://s4.anilist.co/file/anilistcdn/character/large/b245466-rd5I5mchZ3bv.png
+Himiko Toga|My Hero Academia Season 2|https://s4.anilist.co/file/anilistcdn/character/large/b125619-iQxQoGHJvjRJ.png
 Yoichi Isagi|BLUE LOCK|https://s4.anilist.co/file/anilistcdn/character/large/b140856-wVzKSyvU7R5B.png
 Darkness|KONOSUBA -God's blessing on this wonderful world!|https://s4.anilist.co/file/anilistcdn/character/large/b89363-mm21Ll4NegUD.png
 Asa Mitaka||https://s4.anilist.co/file/anilistcdn/character/large/b282389-Mr4vAa8Du2Jx.jpg
@@ -263,8 +263,8 @@ Stark|Frieren: Beyond Journey’s End|https://s4.anilist.co/file/anilistcdn/char
 Albedo|Overlord|https://s4.anilist.co/file/anilistcdn/character/large/b89122-Gj7MBs7F5cMJ.png
 Echidna|Re:ZERO -Starting Life in Another World- Season 2|https://s4.anilist.co/file/anilistcdn/character/large/b129330-ZUtYw4n7N0uH.png
 Iris|Fire Force|https://s4.anilist.co/file/anilistcdn/character/large/n130716-5564jUgQxK9a.png
-Yuno Gasai|The Future Diary|https://s4.anilist.co/file/anilistcdn/character/large/b4963-7ZMcCtXW5hkY.png
 Hinata Hyuuga|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b1555-Q41GLTV3FvYF.png
+Yuno Gasai|The Future Diary|https://s4.anilist.co/file/anilistcdn/character/large/b4963-7ZMcCtXW5hkY.png
 Kaoruko Waguri|The Fragrant Flower Blooms With Dignity|https://s4.anilist.co/file/anilistcdn/character/large/b268676-aQmqvqj0DNoJ.png
 Mayuri Shiina|Steins;Gate|https://s4.anilist.co/file/anilistcdn/character/large/b35253-u6QVgLLyHq2W.png
 Kanna Kamui|Miss Kobayashi's Dragon Maid|https://s4.anilist.co/file/anilistcdn/character/large/b120974-cZHsjS8DX9WW.png
@@ -280,40 +280,40 @@ Shirley Fenette|Code Geass: Lelouch of the Rebellion|https://s4.anilist.co/file/
 Shun Kaidou|The Disastrous Life of Saiki K.|https://s4.anilist.co/file/anilistcdn/character/large/b90112-KVRcvbKBKLxY.png
 Nao Tomori|Charlotte|https://s4.anilist.co/file/anilistcdn/character/large/88951-bRm610RrrXp9.jpg
 Vash the Stampede|Trigun|https://s4.anilist.co/file/anilistcdn/character/large/b162-kfdfqsX7Xjf0.png
-Emma|The Promised Neverland|https://s4.anilist.co/file/anilistcdn/character/large/b121725-LQciVJOjnMVh.png
 Natsu Dragneel|Fairy Tail|https://s4.anilist.co/file/anilistcdn/character/large/b5187-y1OEdRu9sPN2.png
+Emma|The Promised Neverland|https://s4.anilist.co/file/anilistcdn/character/large/b121725-LQciVJOjnMVh.png
 Reki Kyan|SK8 the Infinity|https://s4.anilist.co/file/anilistcdn/character/large/b195120-ndTbU0TpVLWw.png
-Punpun Onodera||https://s4.anilist.co/file/anilistcdn/character/large/b17706-9OF3wt3wnO6s.png
 Elaina|Wandering Witch: The Journey of Elaina|https://s4.anilist.co/file/anilistcdn/character/large/b125736-LIaof9PjXvH3.png
 Tomoe|Kamisama Kiss|https://s4.anilist.co/file/anilistcdn/character/large/b18344-2d8Ao1wHDZ7U.png
 Momonga|Overlord|https://s4.anilist.co/file/anilistcdn/character/large/b89103-ZsnA0r77GHsR.png
-Koushi Sugawara|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b67321-cxP7NdI0JC3H.png
+Punpun Onodera||https://s4.anilist.co/file/anilistcdn/character/large/b17706-9OF3wt3wnO6s.png
 Ochako Uraraka|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89221-gSF2a4gPbG4m.png
+Koushi Sugawara|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b67321-cxP7NdI0JC3H.png
 Dabi|My Hero Academia Season 2|https://s4.anilist.co/file/anilistcdn/character/large/b126378-RFSljq5koy5U.png
 Takumi Usui|Maid-Sama!|https://s4.anilist.co/file/anilistcdn/character/large/b14523-yFjXVeK6c6IE.png
 Gabimaru|Hell’s Paradise|https://s4.anilist.co/file/anilistcdn/character/large/b137260-xmSis8FmwhEE.png
 Tomura Shigaraki|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89226-qGXqFthO4SM3.jpg
+Ais Wallenstein|Is It Wrong to Try to Pick Up Girls in a Dungeon?|https://s4.anilist.co/file/anilistcdn/character/large/b87655-50i1Y554Vs3z.png
 Mafuyu Satou|given|https://s4.anilist.co/file/anilistcdn/character/large/b136844-UoqciaLvz5Jf.png
 Akeno Himejima|High School DxD|https://s4.anilist.co/file/anilistcdn/character/large/b51347-YMb9fndAriXd.png
-Ais Wallenstein|Is It Wrong to Try to Pick Up Girls in a Dungeon?|https://s4.anilist.co/file/anilistcdn/character/large/b87655-50i1Y554Vs3z.png
-Hak Son|Yona of the Dawn|https://s4.anilist.co/file/anilistcdn/character/large/b43815-WRbln8jA1mPk.jpg
 Kaworu Nagisa|Neon Genesis Evangelion|https://s4.anilist.co/file/anilistcdn/character/large/b1261-HYRv3HpsSL92.jpg
-Yotsuba Nakano|The Quintessential Quintuplets|https://s4.anilist.co/file/anilistcdn/character/large/b126374-Aal36iSQ5nKz.png
 Sebastian Michaelis|Black Butler|https://s4.anilist.co/file/anilistcdn/character/large/b10863-DsfonbP2CATa.png
-Pochita|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b170266-bBXPkNJnd3mg.png
+Yotsuba Nakano|The Quintessential Quintuplets|https://s4.anilist.co/file/anilistcdn/character/large/b126374-Aal36iSQ5nKz.png
+Hak Son|Yona of the Dawn|https://s4.anilist.co/file/anilistcdn/character/large/b43815-WRbln8jA1mPk.jpg
 Madoka Kaname|Puella Magi Madoka Magica|https://s4.anilist.co/file/anilistcdn/character/large/b37832-lzVj5IkUciLd.jpg
+Pochita|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b170266-bBXPkNJnd3mg.png
 Pain|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b3180-ITMGBLWNBOgV.png
-Yona|Yona of the Dawn|https://s4.anilist.co/file/anilistcdn/character/large/b43814-M0nlr2AP7vY0.png
 Rebecca|Cyberpunk: Edgerunners|https://s4.anilist.co/file/anilistcdn/character/large/b284163-tt8smoAXl24x.jpg
 David Martinez|Cyberpunk: Edgerunners|https://s4.anilist.co/file/anilistcdn/character/large/b284158-z1uGKC3IYVa1.png
-Rio Futaba|Rascal Does Not Dream of Bunny Girl Senpai|https://s4.anilist.co/file/anilistcdn/character/large/b127633-FcCwWK5sQRhK.png
 Kanao Tsuyuri|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b139038-OcOoDUyLEsRn.png
+Yona|Yona of the Dawn|https://s4.anilist.co/file/anilistcdn/character/large/b43814-M0nlr2AP7vY0.png
+Rio Futaba|Rascal Does Not Dream of Bunny Girl Senpai|https://s4.anilist.co/file/anilistcdn/character/large/b127633-FcCwWK5sQRhK.png
 Kosaki Onodera|Nisekoi|https://s4.anilist.co/file/anilistcdn/character/large/b52723-YbLFn4JmoAVQ.png
 Kobeni Higashiyama|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b144594-0dbO1NSYeZ12.png
 Shirou Emiya|Fate/stay night: Unlimited Blade Works|https://s4.anilist.co/file/anilistcdn/character/large/b496-GI0waavDjyk3.png
-Gen Asagiri|Dr. STONE|https://s4.anilist.co/file/anilistcdn/character/large/b127445-oUCyS7Tl8l5D.png
 Shinoa Hiiragi|Seraph of the End: Vampire Reign|https://s4.anilist.co/file/anilistcdn/character/large/b83017-XXdnbunnBdTd.png
 Tohru|Miss Kobayashi's Dragon Maid|https://s4.anilist.co/file/anilistcdn/character/large/b120970-knjWLdlQIs1y.jpg
+Gen Asagiri|Dr. STONE|https://s4.anilist.co/file/anilistcdn/character/large/b127445-oUCyS7Tl8l5D.png
 Rock Lee|Naruto|https://s4.anilist.co/file/anilistcdn/character/large/b306-oUTOO45xInXt.png
 Kumiko Oumae|Sound! Euphonium|https://s4.anilist.co/file/anilistcdn/character/large/b88708-ZiVPl8LjIjaK.jpg
 Muichirou Tokitou|Demon Slayer: Kimetsu no Yaiba|https://s4.anilist.co/file/anilistcdn/character/large/b136069-6PLglx4tETUX.png
@@ -326,35 +326,35 @@ Rin Shima|Laid-Back Camp|https://s4.anilist.co/file/anilistcdn/character/large/b
 Langa Hasegawa|SK8 the Infinity|https://s4.anilist.co/file/anilistcdn/character/large/b195116-C2Y5jRPiTSng.png
 Archer|Fate/stay night: Unlimited Blade Works|https://s4.anilist.co/file/anilistcdn/character/large/b2087-l5WP4W4vmfJJ.png
 Noriaki Kakyouin|JoJo's Bizarre Adventure: Stardust Crusaders|https://s4.anilist.co/file/anilistcdn/character/large/8945-gyPfrVpCb5CF.jpg
-Mikaela Hyakuya|Seraph of the End: Vampire Reign|https://s4.anilist.co/file/anilistcdn/character/large/b87287-cBUVUJNbvfvT.png
 Noelle Silva|Black Clover|https://s4.anilist.co/file/anilistcdn/character/large/b123283-7nJHtKha0LSm.png
-Aguero Agnis Khun|Tower of God|https://s4.anilist.co/file/anilistcdn/character/large/b84781-sNnhOZ1SZ66f.png
+Mikaela Hyakuya|Seraph of the End: Vampire Reign|https://s4.anilist.co/file/anilistcdn/character/large/b87287-cBUVUJNbvfvT.png
 Nana Komatsu|NANA|https://s4.anilist.co/file/anilistcdn/character/large/b701-gNKbnxT6dbrf.png
+Aguero Agnis Khun|Tower of God|https://s4.anilist.co/file/anilistcdn/character/large/b84781-sNnhOZ1SZ66f.png
+Maka Albarn|Soul Eater|https://s4.anilist.co/file/anilistcdn/character/large/b8439-5TIyWlfClnMs.png
 Nadeko Sengoku|Bakemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/b22050-RUw3vyGYdr9W.jpg
 Yatora Yaguchi|Blue Period|https://s4.anilist.co/file/anilistcdn/character/large/b144674-Y2Y6BlAPu22v.png
-Maka Albarn|Soul Eater|https://s4.anilist.co/file/anilistcdn/character/large/b8439-5TIyWlfClnMs.png
 Annie Leonhart|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b46490-tan274Ifc1Jf.jpg
-Shino Asada|Sword Art Online II|https://s4.anilist.co/file/anilistcdn/character/large/b55147-1fCU8lONEuZQ.png
 Hancock Boa|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b16342-kVOF6V5Q94go.png
+Shino Asada|Sword Art Online II|https://s4.anilist.co/file/anilistcdn/character/large/b55147-1fCU8lONEuZQ.png
 Kousei Arima|Your lie in April|https://s4.anilist.co/file/anilistcdn/character/large/b69407-eyIvpsFPeARS.png
 Akira Fudou|Devilman Crybaby|https://s4.anilist.co/file/anilistcdn/character/large/b2456-rTjIXMLPHTu2.jpg
-Mayoi Hachikuji|Bakemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/b22052-beyfl4AyMGhn.png
 Madara Uchiha|Naruto: Shippuden|https://s4.anilist.co/file/anilistcdn/character/large/b53901-HnRKSoHMG5Vg.png
+Mayoi Hachikuji|Bakemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/b22052-beyfl4AyMGhn.png
 Dok-Ja Kim|Omniscient Reader|https://s4.anilist.co/file/anilistcdn/character/large/b180887-s9sJWFuO18J8.png
 Tamaki Suou|Ouran High School Host Club|https://s4.anilist.co/file/anilistcdn/character/large/b19-7Ot7WSWZ7LKF.png
-William Moriarty|Moriarty the Patriot|https://s4.anilist.co/file/anilistcdn/character/large/b151486-rAFZZZm0Byu0.png
 Hae-In Cha|Solo Leveling|https://s4.anilist.co/file/anilistcdn/character/large/b138789-AhE8m0LWjE7E.png
+William Moriarty|Moriarty the Patriot|https://s4.anilist.co/file/anilistcdn/character/large/b151486-rAFZZZm0Byu0.png
+Beatrice|Re:ZERO -Starting Life in Another World-|https://s4.anilist.co/file/anilistcdn/character/large/b90181-wRPm0OEaucmw.png
 Ken Takakura|DAN DA DAN|https://s4.anilist.co/file/anilistcdn/character/large/b222593-qBqUvpodooAI.png
 Haruhi Fujioka|Ouran High School Host Club|https://s4.anilist.co/file/anilistcdn/character/large/b18-4mPQwygwffNJ.jpg
-Beatrice|Re:ZERO -Starting Life in Another World-|https://s4.anilist.co/file/anilistcdn/character/large/b90181-wRPm0OEaucmw.png
 Jinshi|The Apothecary Diaries|https://s4.anilist.co/file/anilistcdn/character/large/b127278-0qCQciTkPOMS.jpg
 Jean-Pierre Polnareff|JoJo's Bizarre Adventure: Stardust Crusaders|https://s4.anilist.co/file/anilistcdn/character/large/b4368-1KToX8uSi1U1.png
+Tomoya Okazaki|Clannad|https://s4.anilist.co/file/anilistcdn/character/large/b4606-61r9h3WUrkA9.png
 Yuki Souma|Fruits Basket (2019)|https://s4.anilist.co/file/anilistcdn/character/large/b208-5TmAqqh82wNe.png
-Hanamichi Sakuragi|Slam Dunk|https://s4.anilist.co/file/anilistcdn/character/large/b310-3GLKM2I3EiRf.png
-Sora|No Game, No Life|https://s4.anilist.co/file/anilistcdn/character/large/b82523-JB9oevKyXWfc.png
 Himmel|Frieren: Beyond Journey’s End|https://s4.anilist.co/file/anilistcdn/character/large/b184311-wQFySqYXEqf1.png
 Eru Chitanda|Hyouka|https://s4.anilist.co/file/anilistcdn/character/large/b55133-S7lRrP0gKXpX.png
-Tomoya Okazaki|Clannad|https://s4.anilist.co/file/anilistcdn/character/large/b4606-61r9h3WUrkA9.png
+Hanamichi Sakuragi|Slam Dunk|https://s4.anilist.co/file/anilistcdn/character/large/b310-3GLKM2I3EiRf.png
+Sora|No Game, No Life|https://s4.anilist.co/file/anilistcdn/character/large/b82523-JB9oevKyXWfc.png
 Tsukasa Yuzaki|TONIKAWA: Over The Moon For You|https://s4.anilist.co/file/anilistcdn/character/large/b131106-ZJOpYOpurcYS.png
 Tenshi no Akuma|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b152231-jiMRx9je7H6y.png
 Sawako Kuronuma|Kimi ni Todoke: From Me to You|https://s4.anilist.co/file/anilistcdn/character/large/b6977-rCtlFRoYgE07.png
@@ -362,72 +362,72 @@ Mashiro Shiina|The Pet Girl of Sakurasou|https://s4.anilist.co/file/anilistcdn/c
 Erina Nakiri|Food Wars!|https://s4.anilist.co/file/anilistcdn/character/large/b75284-4Hiyq7DOwvy7.png
 Suzune Horikita|Classroom of the Elite|https://s4.anilist.co/file/anilistcdn/character/large/b123213-jUfrGBXfW7BL.png
 Lucy Heartfilia|Fairy Tail|https://s4.anilist.co/file/anilistcdn/character/large/b5186-izgXf2S86K9u.png
+Kyouko Kirigiri|Danganronpa: The Animation|https://s4.anilist.co/file/anilistcdn/character/large/b63845-43rWjycWhYFF.png
 Mitsuha Miyamizu|Your Name.|https://s4.anilist.co/file/anilistcdn/character/large/b121514-MGI7JRluscpz.png
 Casca|Berserk|https://s4.anilist.co/file/anilistcdn/character/large/b423-AmVFCaJJOBsc.png
-Kyouko Kirigiri|Danganronpa: The Animation|https://s4.anilist.co/file/anilistcdn/character/large/b63845-43rWjycWhYFF.png
-Guido Mista|JoJo's Bizarre Adventure: Golden Wind|https://s4.anilist.co/file/anilistcdn/character/large/b13084-DMCv7SP1uRBq.png
 Ulquiorra Cifer|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b1081-xLTqHfLL2I2W.png
-Fubuki|One-Punch Man|https://s4.anilist.co/file/anilistcdn/character/large/b81931-fmouMoprPVbV.png
+Sylphiette|Mushoku Tensei: Jobless Reincarnation|https://s4.anilist.co/file/anilistcdn/character/large/b88346-h8kCL93AXj4n.png
+Guido Mista|JoJo's Bizarre Adventure: Golden Wind|https://s4.anilist.co/file/anilistcdn/character/large/b13084-DMCv7SP1uRBq.png
 Meliodas|The Seven Deadly Sins|https://s4.anilist.co/file/anilistcdn/character/large/b72921-XDHNd1wflN6P.png
+Fubuki|One-Punch Man|https://s4.anilist.co/file/anilistcdn/character/large/b81931-fmouMoprPVbV.png
 Denki Kaminari|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89249-Ygc30RlYoFta.png
 Feitan Portor|Hunter x Hunter (2011)|https://s4.anilist.co/file/anilistcdn/character/large/3195.jpg
 Shiki Ryougi|the Garden of sinners Chapter 1: Thanatos. (Overlooking View)|https://s4.anilist.co/file/anilistcdn/character/large/b3105-lI0m8vJ3JQK1.png
-Sylphiette|Mushoku Tensei: Jobless Reincarnation|https://s4.anilist.co/file/anilistcdn/character/large/b88346-h8kCL93AXj4n.png
 Ginko|MUSHI-SHI|https://s4.anilist.co/file/anilistcdn/character/large/b425-khK03T5n9Umq.png
 Keisuke Baji|Tokyo Revengers|https://s4.anilist.co/file/anilistcdn/character/large/b145343-vRrkdWEUXwYM.jpg
 Himeno|Chainsaw Man|https://s4.anilist.co/file/anilistcdn/character/large/b144596-kvL6SD2litJu.png
 Ougi Oshino|Monogatari Series Second Season|https://s4.anilist.co/file/anilistcdn/character/large/b87886-ZRBtKp5Sjoaa.png
 Eiji Okumura|BANANA FISH|https://s4.anilist.co/file/anilistcdn/character/large/b21928-4zjiuRL3omAo.jpg
-Doflamingo Donquixote|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b2754-B4gGSlNYgsyh.jpg
 Yuuichi Katagiri|Tomodachi Game|https://s4.anilist.co/file/anilistcdn/character/large/b122064-p5x9pgsdjj4W.jpg
 Mako Mankanshoku|Kill la Kill|https://s4.anilist.co/file/anilistcdn/character/large/b87511-T8lwlQKd6SoK.png
-Hirotaka Nifuji|Wotakoi: Love is Hard for Otaku|https://s4.anilist.co/file/anilistcdn/character/large/b122189-ai5CYyRv1CAH.png
+Doflamingo Donquixote|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b2754-B4gGSlNYgsyh.jpg
 Kotarou Katsura|Gintama|https://s4.anilist.co/file/anilistcdn/character/large/b1533-tSqUrj2DOK5p.png
+Hirotaka Nifuji|Wotakoi: Love is Hard for Otaku|https://s4.anilist.co/file/anilistcdn/character/large/b122189-ai5CYyRv1CAH.png
 Mary Saotome|Kakegurui|https://s4.anilist.co/file/anilistcdn/character/large/b122687-jl1wk9rjO57e.png
 Grimmjow Jaegerjaquez|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b1080-JUNo2Or0UGZg.jpg
+Marcille Donato|Delicious in Dungeon|https://s4.anilist.co/file/anilistcdn/character/large/b127292-MAWgxbS0Cbrs.png
 Bojji|Ranking of Kings|https://s4.anilist.co/file/anilistcdn/character/large/b209532-s7ciwKqKrIw7.png
 Azusa Nakano|K-ON!|https://s4.anilist.co/file/anilistcdn/character/large/b21173-0RB5dOJdGt9y.png
-Marcille Donato|Delicious in Dungeon|https://s4.anilist.co/file/anilistcdn/character/large/b127292-MAWgxbS0Cbrs.png
-Izaya Orihara|Durarara!!|https://s4.anilist.co/file/anilistcdn/character/large/b24596-IKSguezbPH9D.png
 Akaza|Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train|https://s4.anilist.co/file/anilistcdn/character/large/b141694-0COi0GVXPuEn.png
+Izaya Orihara|Durarara!!|https://s4.anilist.co/file/anilistcdn/character/large/b24596-IKSguezbPH9D.png
 Tsuyu Asui|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89223-5762vburxnlz.png
 Keigo Takami|My Hero Academia Season 4|https://s4.anilist.co/file/anilistcdn/character/large/b128299-eMEsWazNXE56.png
+Ram|Re:ZERO -Starting Life in Another World-|https://s4.anilist.co/file/anilistcdn/character/large/b88576-NWkotUiJ3mK3.png
 Daiki Aomine|Kuroko's Basketball|https://s4.anilist.co/file/anilistcdn/character/large/b36820-bW2c6TbIqgKO.jpg
 Isaac Foster|Angels of Death|https://s4.anilist.co/file/anilistcdn/character/large/b123328-NZApzipm9Qwy.png
-Shinya Kougami|PSYCHO-PASS|https://s4.anilist.co/file/anilistcdn/character/large/b68315-f9RBjyJCoj95.jpg
 Winry Rockbell|Fullmetal Alchemist: Brotherhood|https://s4.anilist.co/file/anilistcdn/character/large/63-xloedtYxiJ2E.jpg
-Ritsuka Uenoyama|given|https://s4.anilist.co/file/anilistcdn/character/large/b136843-z6IjhOi636WT.png
 Takina Inoue|Lycoris Recoil|https://s4.anilist.co/file/anilistcdn/character/large/b260328-GVvi4r6RKivm.png
-Ryuunosuke Tanaka|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b67325-yPkbZJkofp5w.jpg
+Shinya Kougami|PSYCHO-PASS|https://s4.anilist.co/file/anilistcdn/character/large/b68315-f9RBjyJCoj95.jpg
+Ritsuka Uenoyama|given|https://s4.anilist.co/file/anilistcdn/character/large/b136843-z6IjhOi636WT.png
 Riza Hawkeye|Fullmetal Alchemist: Brotherhood|https://s4.anilist.co/file/anilistcdn/character/large/b70-k4bCgDspyOdI.png
-Sinbad|Magi: The Labyrinth of Magic|https://s4.anilist.co/file/anilistcdn/character/large/b42528-WS92Fmtwx7x0.png
-Ram|Re:ZERO -Starting Life in Another World-|https://s4.anilist.co/file/anilistcdn/character/large/b88576-NWkotUiJ3mK3.png
+Ryuunosuke Tanaka|HAIKYU!!|https://s4.anilist.co/file/anilistcdn/character/large/b67325-yPkbZJkofp5w.jpg
 Newgate Edward|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/b2751-NnzW0N2vCTjX.jpg
-Rui Tachibana|Domestic Girlfriend|https://s4.anilist.co/file/anilistcdn/character/large/b127596-VJjQQk2uWrgM.png
+Sinbad|Magi: The Labyrinth of Magic|https://s4.anilist.co/file/anilistcdn/character/large/b42528-WS92Fmtwx7x0.png
 Naoka Ueno|A Silent Voice|https://s4.anilist.co/file/anilistcdn/character/large/124026-KcQmX7heg7im.jpg
+Rui Tachibana|Domestic Girlfriend|https://s4.anilist.co/file/anilistcdn/character/large/b127596-VJjQQk2uWrgM.png
 Ikuyo Kita|BOCCHI THE ROCK!|https://s4.anilist.co/file/anilistcdn/character/large/b266041-1HKgjJGP2MmM.png
-Joe Yabuki|Tomorrow's Joe|https://s4.anilist.co/file/anilistcdn/character/large/b11804-iGb4oJ99VCcz.jpg
 Tsumugi Kotobuki|K-ON!|https://s4.anilist.co/file/anilistcdn/character/large/b19568-pF5UBfB6U8G2.png
 Franky|ONE PIECE|https://s4.anilist.co/file/anilistcdn/character/large/n64-ChX6ZzHHjXqA.png
-Fushi|To Your Eternity|https://s4.anilist.co/file/anilistcdn/character/large/b136548-FjWExC5ScBqW.jpg
-Mirio Togata|My Hero Academia Season 3|https://s4.anilist.co/file/anilistcdn/character/large/b123527-rz0OotcLY0E4.png
+Joe Yabuki|Tomorrow's Joe|https://s4.anilist.co/file/anilistcdn/character/large/b11804-iGb4oJ99VCcz.jpg
 Kanade Tachibana|Angel Beats!|https://s4.anilist.co/file/anilistcdn/character/large/b22369-zC7OgGbfO7b6.jpg
+Mirio Togata|My Hero Academia Season 3|https://s4.anilist.co/file/anilistcdn/character/large/b123527-rz0OotcLY0E4.png
+Fushi|To Your Eternity|https://s4.anilist.co/file/anilistcdn/character/large/b136548-FjWExC5ScBqW.jpg
+Nagito Komaeda|Danganronpa 3: The End of Hope’s Peak High School - Despair Arc|https://s4.anilist.co/file/anilistcdn/character/large/b73227-AY45waaQAos0.png
 Yuusuke Urameshi|Yu Yu Hakusho: Ghostfiles|https://s4.anilist.co/file/anilistcdn/character/large/b729-V6GlADOEZv3x.png
 Suruga Kanbaru|Bakemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/22054-n6Jsvp80bUhD.jpg
-Nagito Komaeda|Danganronpa 3: The End of Hope’s Peak High School - Despair Arc|https://s4.anilist.co/file/anilistcdn/character/large/b73227-AY45waaQAos0.png
 Kyouka Jirou|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89897-5vU7N3ayiKRr.png
-Chisa Kotegawa|Grand Blue Dreaming|https://s4.anilist.co/file/anilistcdn/character/large/b123181-t0pV6LtaDUf6.png
 Haruhi Suzumiya|The Melancholy of Haruhi Suzumiya|https://s4.anilist.co/file/anilistcdn/character/large/b251-8DTaCNkSvBQ8.png
+Chisa Kotegawa|Grand Blue Dreaming|https://s4.anilist.co/file/anilistcdn/character/large/b123181-t0pV6LtaDUf6.png
 Escanor|The Seven Deadly Sins: Revival of the Commandments|https://s4.anilist.co/file/anilistcdn/character/large/b90202-1H7FIX2hDmYd.png
 Nene Yashiro|Toilet-bound Hanako-kun|https://s4.anilist.co/file/anilistcdn/character/large/b128652-2LLhX7bBtwyC.png
 Ruby Hoshino|OSHI NO KO|https://s4.anilist.co/file/anilistcdn/character/large/b183884-iyo3BmTuhJ0l.jpg
 Tetsuya Kuroko|Assassination Classroom Second Season|https://s4.anilist.co/file/anilistcdn/character/large/b18769-1SOeKdgkjBef.png
+Trunks|Dragon Ball Z|https://s4.anilist.co/file/anilistcdn/character/large/b2707-YKWmn4q87oF8.png
 Victor Nikiforov|Yuri!!! on ICE|https://s4.anilist.co/file/anilistcdn/character/large/b90225-5NweNvd4YiDr.png
 Maki Oze|Fire Force|https://s4.anilist.co/file/anilistcdn/character/large/b130713-TgLx8rgtGpXV.png
-Trunks|Dragon Ball Z|https://s4.anilist.co/file/anilistcdn/character/large/b2707-YKWmn4q87oF8.png
 Ippo Makunouchi|Hajime no Ippo: The Fighting!|https://s4.anilist.co/file/anilistcdn/character/large/b15-AAj73hDX9bor.jpg
-Decim|Death Parade|https://s4.anilist.co/file/anilistcdn/character/large/b81853-CY99xwoziDG4.png
 Yuri Nakamura|Angel Beats!|https://s4.anilist.co/file/anilistcdn/character/large/b22370-pNQxFEv1K7lS.jpg
+Decim|Death Parade|https://s4.anilist.co/file/anilistcdn/character/large/b81853-CY99xwoziDG4.png
 Chitoge Kirisaki|Nisekoi|https://s4.anilist.co/file/anilistcdn/character/large/b48391-SuJot8cVKjHj.png
 Soul Eater Evans|Soul Eater|https://s4.anilist.co/file/anilistcdn/character/large/b8456-GtNbISpXhkvd.png
 Tamaki Amajiki|My Hero Academia Season 3|https://s4.anilist.co/file/anilistcdn/character/large/b125934-HZkorJEHedRy.png
@@ -437,64 +437,64 @@ Gohan Son|Dragon Ball Z|https://s4.anilist.co/file/anilistcdn/character/large/b2
 Sumi Sakurasawa|Rent-a-Girlfriend|https://s4.anilist.co/file/anilistcdn/character/large/b144665-aPda7bPvOoYl.png
 Noé Archiviste|The Case Study of Vanitas|https://s4.anilist.co/file/anilistcdn/character/large/b89835-xnAJMex6Uq0U.png
 Miyako Shikimori|Shikimori's Not Just a Cutie|https://s4.anilist.co/file/anilistcdn/character/large/b155702-S8irhsg4QTPf.png
-Krista Lenz|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b62481-ZZDa7vn17lMU.png
-Crona|Soul Eater|https://s4.anilist.co/file/anilistcdn/character/large/b11919-a7TkrWsP3H1Z.png
-Thorkell|Vinland Saga|https://s4.anilist.co/file/anilistcdn/character/large/b17440-XvYe5JY862ZT.png
-Ryo Asuka|Devilman Crybaby|https://s4.anilist.co/file/anilistcdn/character/large/b4092-63yxC7cCrWke.png
-Kallen Stadtfeld|Code Geass: Lelouch of the Rebellion|https://s4.anilist.co/file/anilistcdn/character/large/b558-8tSMZ4a0LWrn.jpg
 Xiaoshi Cheng|Link Click|https://s4.anilist.co/file/anilistcdn/character/large/b218266-ypsehWLIcfER.png
-Ai Ooto|WONDER EGG PRIORITY|https://s4.anilist.co/file/anilistcdn/character/large/b199892-IUa7rBAT4j9H.png
-Shizuo Heiwajima|Durarara!!|https://s4.anilist.co/file/anilistcdn/character/large/b24595-GIy3ql42WQfY.png
-Tamaki Kotatsu|Fire Force|https://s4.anilist.co/file/anilistcdn/character/large/b130751-J8rhd4d3TxF4.png
+Krista Lenz|Attack on Titan|https://s4.anilist.co/file/anilistcdn/character/large/b62481-ZZDa7vn17lMU.png
+Kallen Stadtfeld|Code Geass: Lelouch of the Rebellion|https://s4.anilist.co/file/anilistcdn/character/large/b558-8tSMZ4a0LWrn.jpg
+Thorkell|Vinland Saga|https://s4.anilist.co/file/anilistcdn/character/large/b17440-XvYe5JY862ZT.png
+Crona|Soul Eater|https://s4.anilist.co/file/anilistcdn/character/large/b11919-a7TkrWsP3H1Z.png
+Ryo Asuka|Devilman Crybaby|https://s4.anilist.co/file/anilistcdn/character/large/b4092-63yxC7cCrWke.png
 Orihime Inoue|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b7-JdR4betokDjR.jpg
+Ai Ooto|WONDER EGG PRIORITY|https://s4.anilist.co/file/anilistcdn/character/large/b199892-IUa7rBAT4j9H.png
+Tamaki Kotatsu|Fire Force|https://s4.anilist.co/file/anilistcdn/character/large/b130751-J8rhd4d3TxF4.png
+Shizuo Heiwajima|Durarara!!|https://s4.anilist.co/file/anilistcdn/character/large/b24595-GIy3ql42WQfY.png
 Ritsu Tainaka|K-ON!|https://s4.anilist.co/file/anilistcdn/character/large/b19567-ztMNJBxTNqmZ.png
-Toushirou Hitsugaya|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b245-buy3Cfn6IFSB.jpg
 Alisa Kujou|Alya Sometimes Hides Her Feelings in Russian|https://s4.anilist.co/file/anilistcdn/character/large/b217334-buImnwO26SgS.jpg
+Toushirou Hitsugaya|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b245-buy3Cfn6IFSB.jpg
 Ciel Phantomhive|Black Butler|https://s4.anilist.co/file/anilistcdn/character/large/b12531-joBTjTP3fonc.png
-Ling Yao|Fullmetal Alchemist: Brotherhood|https://s4.anilist.co/file/anilistcdn/character/large/b3293-2GiFTmLQnBw8.jpg
 Toushirou Hijikata|Gintama|https://s4.anilist.co/file/anilistcdn/character/large/b2650-zgkj5l8mIOnn.png
-Megumi Katou|Saekano: How to Raise a Boring Girlfriend|https://s4.anilist.co/file/anilistcdn/character/large/b88748-zPL68ZFgFRH8.png
+Ling Yao|Fullmetal Alchemist: Brotherhood|https://s4.anilist.co/file/anilistcdn/character/large/b3293-2GiFTmLQnBw8.jpg
 Miku Hatsune|Zoku Sayonara, Zetsubou-Sensei|https://s4.anilist.co/file/anilistcdn/character/large/b7156-DUwViOmpWw2B.jpg
 Bell Cranel|Is It Wrong to Try to Pick Up Girls in a Dungeon?|https://s4.anilist.co/file/anilistcdn/character/large/b88860-catfcwlvUYst.jpg
+Megumi Katou|Saekano: How to Raise a Boring Girlfriend|https://s4.anilist.co/file/anilistcdn/character/large/b88748-zPL68ZFgFRH8.png
 Gray Fullbuster|Fairy Tail|https://s4.anilist.co/file/anilistcdn/character/large/b4839-p2SBgjdTxHxk.png
-Motoko Kusanagi|Ghost in the Shell|https://s4.anilist.co/file/anilistcdn/character/large/b1795-vKakY5aXVyCl.jpg
 Yotsugi Ononoki|Nisemonogatari|https://s4.anilist.co/file/anilistcdn/character/large/b57499-6cjBq1SlPRpq.png
+Motoko Kusanagi|Ghost in the Shell|https://s4.anilist.co/file/anilistcdn/character/large/b1795-vKakY5aXVyCl.jpg
 Kou Mabuchi|Blue Spring Ride|https://s4.anilist.co/file/anilistcdn/character/large/b41026-WkbhSjdpZISG.jpg
 Rin Matsuoka|Free! -Iwatobi Swim Club-|https://s4.anilist.co/file/anilistcdn/character/large/b83019-wCHpG1RDVVNC.png
 Satsuki Kiryuuin|Kill la Kill|https://s4.anilist.co/file/anilistcdn/character/large/b83799-oPxSwMA9XAvu.png
 Hatsuharu Souma|Fruits Basket (2019)|https://s4.anilist.co/file/anilistcdn/character/large/b369-NDFi2A2BzqO6.png
-Atsushi Nakajima|Bungo Stray Dogs|https://s4.anilist.co/file/anilistcdn/character/large/b89197-vB5kP72ruckV.png
 Nagisa Furukawa|Clannad|https://s4.anilist.co/file/anilistcdn/character/large/b4604-YFJiWeuGSIYf.png
-Daisuke Kanbe|The Millionaire Detective - Balance: UNLIMITED|https://s4.anilist.co/file/anilistcdn/character/large/b158386-orMtLSB0aNW8.png
-Youko Littner|Gurren Lagann|https://s4.anilist.co/file/anilistcdn/character/large/b2063-7BKqQbrhtDD2.png
+Atsushi Nakajima|Bungo Stray Dogs|https://s4.anilist.co/file/anilistcdn/character/large/b89197-vB5kP72ruckV.png
 Ayumu Kasuga|Azumanga Daioh|https://s4.anilist.co/file/anilistcdn/character/large/b183-SKDRguIQJ0Iz.png
+Youko Littner|Gurren Lagann|https://s4.anilist.co/file/anilistcdn/character/large/b2063-7BKqQbrhtDD2.png
+Daisuke Kanbe|The Millionaire Detective - Balance: UNLIMITED|https://s4.anilist.co/file/anilistcdn/character/large/b158386-orMtLSB0aNW8.png
 Mash Burnedead|MASHLE: MAGIC AND MUSCLES|https://s4.anilist.co/file/anilistcdn/character/large/b158734-k8FAVIyXKdW1.jpg
 Sakura Yamauchi|I Want to Eat Your Pancreas|https://s4.anilist.co/file/anilistcdn/character/large/b127118-XEvgt4yHSkQv.jpg
 Vivy|Vivy -Fluorite Eye's Song-|https://s4.anilist.co/file/anilistcdn/character/large/b209903-ue6AE5qBvMgI.png
 Iskandar|Fate/Zero|https://s4.anilist.co/file/anilistcdn/character/large/b16021-w5Jn1eb807vt.png
+Qifrey|Witch Hat Atelier|https://s4.anilist.co/file/anilistcdn/character/large/b129841-brgGFuOv1h0n.png
 Yuuri Plisetsky|Yuri!!! on ICE|https://s4.anilist.co/file/anilistcdn/character/large/b90224-sSpYZe1avAKW.jpg
+Piccolo|Dragon Ball Z|https://s4.anilist.co/file/anilistcdn/character/large/b914-KuS8AWjqBrqa.jpg
 Fumikage Tokoyami|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89898-yAYDmPQPSOTV.png
 Goblin Slayer|GOBLIN SLAYER|https://s4.anilist.co/file/anilistcdn/character/large/b126458-wCulCEFEPZSK.png
-Piccolo|Dragon Ball Z|https://s4.anilist.co/file/anilistcdn/character/large/b914-KuS8AWjqBrqa.jpg
-Qifrey|Witch Hat Atelier|https://s4.anilist.co/file/anilistcdn/character/large/b129841-brgGFuOv1h0n.png
-Yuu Koito|Bloom Into You|https://s4.anilist.co/file/anilistcdn/character/large/b123528-q3SR8wyDPTCe.png
 Kirei Kotomine|Fate/Zero|https://s4.anilist.co/file/anilistcdn/character/large/b506-qeg0TqitdCMS.png
+Yuu Koito|Bloom Into You|https://s4.anilist.co/file/anilistcdn/character/large/b123528-q3SR8wyDPTCe.png
 Iori Kitahara|Grand Blue Dreaming|https://s4.anilist.co/file/anilistcdn/character/large/b123182-tuQ2yf5IEx02.jpg
-Misaki Ayuzawa|Maid-Sama!|https://s4.anilist.co/file/anilistcdn/character/large/b14941-qh15JS5cEQDL.jpg
 Shiori Sakurazaka|More than a Married Couple, but Not Lovers.|https://s4.anilist.co/file/anilistcdn/character/large/b273105-BUCVawntAuJF.png
-Yuno|Black Clover|https://s4.anilist.co/file/anilistcdn/character/large/b123284-w6kIFYnTclMd.png
+Misaki Ayuzawa|Maid-Sama!|https://s4.anilist.co/file/anilistcdn/character/large/b14941-qh15JS5cEQDL.jpg
 Alice Zuberg|Sword Art Online: Alicization|https://s4.anilist.co/file/anilistcdn/character/large/b75450-vDO1lQup1pe7.jpg
-Beatrice|Umineko: When They Cry|https://s4.anilist.co/file/anilistcdn/character/large/b10285-oyIek2zBT5Vm.jpg
+Yuno|Black Clover|https://s4.anilist.co/file/anilistcdn/character/large/b123284-w6kIFYnTclMd.png
 Chiaki Nanami|Danganronpa 3: The End of Hope’s Peak High School - Despair Arc|https://s4.anilist.co/file/anilistcdn/character/large/b73205-XVUjSJd97PbC.jpg
+Beatrice|Umineko: When They Cry|https://s4.anilist.co/file/anilistcdn/character/large/b10285-oyIek2zBT5Vm.jpg
 Zeke|Attack on Titan Season 2|https://s4.anilist.co/file/anilistcdn/character/large/b125661-FiqFvAtNlL0v.png
+Guang Lu|Link Click|https://s4.anilist.co/file/anilistcdn/character/large/b218267-dl2RO0rxGOAU.png
 Ichika Nakano|The Quintessential Quintuplets|https://s4.anilist.co/file/anilistcdn/character/large/b126371-0KQpl80s8kXQ.png
 Momo Yaoyorozu|My Hero Academia|https://s4.anilist.co/file/anilistcdn/character/large/b89241-Q8KzAfX4Qe2y.png
-Kaede Azusagawa|Rascal Does Not Dream of Bunny Girl Senpai|https://s4.anilist.co/file/anilistcdn/character/large/b127613-LBtFkMJfUWpg.png
-Guang Lu|Link Click|https://s4.anilist.co/file/anilistcdn/character/large/b218267-dl2RO0rxGOAU.png
 Mei Misaki|Another|https://s4.anilist.co/file/anilistcdn/character/large/b41402-uMQLbpd8uwKH.png
+Kaede Azusagawa|Rascal Does Not Dream of Bunny Girl Senpai|https://s4.anilist.co/file/anilistcdn/character/large/b127613-LBtFkMJfUWpg.png
 Wakana Gojou|My Dress-Up Darling|https://s4.anilist.co/file/anilistcdn/character/large/b133678-IitCgjDxQGgu.png
 Mahiru Shiina|The Angel Next Door Spoils Me Rotten|https://s4.anilist.co/file/anilistcdn/character/large/b195602-Cc0vrUDl7r15.png
-Edward Wong Hau Pepelu Tivrusky IV|Cowboy Bebop|https://s4.anilist.co/file/anilistcdn/character/large/b16-80wd87nl1Rue.png
 Rintarou Tsumugi|The Fragrant Flower Blooms With Dignity|https://s4.anilist.co/file/anilistcdn/character/large/b268677-APMPGH67QqPr.jpg
-Kaiji Itou|Kaiji - Ultimate Survivor|https://s4.anilist.co/file/anilistcdn/character/large/b5578-FqFWIjqfMbBj.png
+Edward Wong Hau Pepelu Tivrusky IV|Cowboy Bebop|https://s4.anilist.co/file/anilistcdn/character/large/b16-80wd87nl1Rue.png
 Byakuya Kuchiki|Bleach|https://s4.anilist.co/file/anilistcdn/character/large/b907-kgnDKeMtEN5y.png
+Kaiji Itou|Kaiji - Ultimate Survivor|https://s4.anilist.co/file/anilistcdn/character/large/b5578-FqFWIjqfMbBj.png
